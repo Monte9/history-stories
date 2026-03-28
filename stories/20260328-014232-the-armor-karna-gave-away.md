@@ -5,11 +5,9 @@ tradition: "mahabharata"
 type: "hard-lesson"
 theme: "sacrifice"
 date: "2026-03-27"
-cover: "/covers/20260327-184232-the-armor-karna-gave-away.png"
+cover: "/covers/20260328-014232-the-armor-karna-gave-away.png"
 oneLiner: "Born with divine armor fused to his skin, Karna gave it away knowing it would cost him his life."
 ---
-
-**The Armor Karna Gave Away**
 
 Karna was born armored.
 

@@ -46,14 +46,6 @@ export default async function StoryPage({
       {/* Content */}
       <article className="relative mx-auto max-w-2xl px-6 pb-16">
         <div className={story.cover ? "-mt-24" : "pt-12"}>
-          {/* Back link */}
-          <Link
-            href="/"
-            className="mb-6 inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-accent)]"
-          >
-            ← All stories
-          </Link>
-
           {/* Meta */}
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span
@@ -61,12 +53,10 @@ export default async function StoryPage({
             >
               {traditionLabels[story.tradition] || story.tradition}
             </span>
-            <span className="text-xs text-[var(--color-text-muted)]">
-              {story.date}
-            </span>
-            <span className="text-xs text-[var(--color-text-muted)]">
-              · {story.type}
-            </span>
+            {/* Character */}
+            <p className="ml-2 text-sm font-medium text-[var(--color-accent-dim)]">
+              {story.character}
+            </p>
           </div>
 
           {/* Title */}
@@ -74,10 +64,12 @@ export default async function StoryPage({
             {story.title}
           </h1>
 
-          {/* Character */}
-          <p className="mb-8 text-sm font-medium text-[var(--color-accent-dim)]">
-            {story.character}
-          </p>
+          {/* Type and Theme */}
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-sm text-[var(--color-text-muted)]">
+              {story.type} • {story.theme}
+            </span>
+          </div>
 
           {/* Body */}
           <div className="space-y-5">

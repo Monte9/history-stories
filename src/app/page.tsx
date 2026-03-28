@@ -16,7 +16,7 @@ const traditionLabels: Record<string, string> = {
 function StoryCard({ story }: { story: Story }) {
   return (
     <Link href={`/${story.slug}`} className="group block">
-      <article className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] transition-all duration-300 hover:border-[var(--color-accent-dim)] hover:shadow-[0_0_40px_var(--color-accent-glow)]">
+      <article className="relative min-h-[400px] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] transition-all duration-300 hover:border-[var(--color-accent-dim)] hover:shadow-[0_0_40px_var(--color-accent-glow)]">
         {story.cover && (
           <div className="aspect-[16/10] overflow-hidden">
             <img
@@ -34,7 +34,7 @@ function StoryCard({ story }: { story: Story }) {
               {traditionLabels[story.tradition] || story.tradition}
             </span>
             <span className="text-xs text-[var(--color-text-muted)]">
-              {story.date}
+              {story.character}
             </span>
           </div>
           <h2 className="mb-2 text-lg font-bold leading-tight text-[var(--color-text)] group-hover:text-[var(--color-accent)]">
@@ -43,14 +43,6 @@ function StoryCard({ story }: { story: Story }) {
           <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">
             {story.oneLiner}
           </p>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs font-medium text-[var(--color-accent-dim)]">
-              {story.character}
-            </span>
-            <span className="text-xs text-[var(--color-text-muted)]">
-              · {story.type}
-            </span>
-          </div>
         </div>
       </article>
     </Link>
@@ -63,7 +55,7 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="border-b border-[var(--color-border)] bg-[var(--color-bg)]">
+      <header className="bg-[var(--color-bg)]">
         <div className="mx-auto max-w-6xl px-6 py-12 text-center">
           <h1 className="mb-3 text-4xl font-bold tracking-tight text-[var(--color-text)] sm:text-5xl">
             History Stories
