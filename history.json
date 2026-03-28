@@ -26,6 +26,15 @@
       "title": "The Vulture King Who Fell for Dharma",
       "oneLiner": "An ancient vulture king fought Ravana alone — not because he could win, but because looking away wasn't an option.",
       "createdAt": "2026-03-28T02:13:33Z"
+    },
+    {
+      "character": "Marcus Aurelius",
+      "tradition": "roman",
+      "type": "philosophy",
+      "theme": "wisdom",
+      "title": "What Marcus Aurelius Wrote in the Dark",
+      "oneLiner": "The most powerful man in the world spent his nights writing private notes to himself — reminders not to waste the morning, not to be angry, not to fear death.",
+      "createdAt": "2026-03-28T20:36:26Z"
     }
   ]
 }
