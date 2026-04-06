@@ -36,25 +36,13 @@ A growing library of short, well-written historical stories spanning Roman histo
 - Basic character relationship data (allies, rivals, family) on profile pages
 - Basic search or keyword filter across titles and one-liners
 
-### Phase 2: Timelines
-- Chronological timeline view per tradition — battles, events, dynasties
-- Each entry links to relevant stories and characters
-- Visual treatment: vertical with era markers
-
-### Phase 3: Daily Quotes
-- One curated verse or passage per day from across all three traditions
-- Shown on homepage or dedicated section
-- Pre-curated rotating list to start (static generation)
-
-### Phase 4: Personalization
-- Save favorite characters, quotes, and stories
-- localStorage to start
-- "Your collection" view
-
 ---
 
 ## Backlog
 
+- **Timelines** — chronological view per tradition (battles, events, dynasties), entries linking to stories and characters
+- **Daily quotes** — one curated verse or passage per day across all three traditions, pre-curated rotating list to start
+- **Personalization** — save favorite characters, quotes, and stories (localStorage); "your collection" view
 - **Custom domain** — connect via Vercel, low effort
 - **Content depth** — batch-generate to 20+ stories, balanced across traditions
 - **RSS feed** — static XML for subscribers
