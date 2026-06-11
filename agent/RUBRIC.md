@@ -14,9 +14,14 @@ The evaluator grades the running site against this rubric plus the current sprin
 ## Soft criteria (note in verdict, do not fail on these alone)
 
 - Spacing and alignment consistent with existing cards/sections
-- Typography hierarchy clear; no near-invisible text on the dark theme
+- Typography hierarchy clear; no near-invisible text anywhere (dark-on-dark on the site pages, light-on-white inside the bright room)
 - Hover/active states present on new interactive elements
-- Dark theme and tradition colors (amber/Roman, emerald/Ramayana, blue/Mahabharata) respected
+- Dark theme and tradition colors (amber/Roman, emerald/Ramayana, blue/Mahabharata) respected on **site chrome and pages only**: header, overlays, `/gallery`, story pages. This does NOT apply inside the museum room itself — the room is a bright daylight gallery per SPEC 2.3 (Monte's Broad reference, 2026-06-11, supersedes the old night look). A dark, moody room is now a defect, not a theme match.
+- The museum room matches the Broad reference vibe: bright, airy, evenly lit, white walls, light polished-concrete floor, glowing honeycomb ceiling; tradition colors appear as legible darkened tints on labels and focus outlines, not as colored light washes
+
+## Curator taste audit (on request, used by taste-pass sprints)
+
+When a sprint asks for a taste audit, switch from gatekeeper to curator: walk the room at 1280x900 and 390x844, visit every `?face=` wall, do a full story round trip, and judge it as a demanding museum visitor. Deliverable: `agent/evals/<ts>-taste-audit.md` with screenshot evidence and a ranked findings list covering composition, lighting, spacing, typography, copy, and motion feel. Rate each finding "blocks shippable" or "nice to have". Findings must be concrete enough to convert into interaction-verifiable acceptance criteria. An audit is not a verdict; it does not PASS or FAIL a sprint by itself.
 
 ## Protocol
 
