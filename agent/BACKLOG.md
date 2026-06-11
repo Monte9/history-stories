@@ -38,7 +38,7 @@ Acceptance criteria:
 - Pressing Enter while focused navigates to that story's page (`/<slug>` renders the story)
 - Pressing Enter with nothing focused leaves you in the room (URL unchanged, no errors)
 
-## Sprint 4: Story triptych and Escape return — pending
+## Sprint 4: Story triptych and Escape return — done (2026-06-11, PASS)
 
 Three-panel cover carousel (full cover + two derived treatments, `covers[]` frontmatter honored per SPEC 5.1), arrow-key cycling, swipe, dots. Camera persistence: Enter saves to sessionStorage, Escape on the story page returns to `/` at the saved spot.
 
