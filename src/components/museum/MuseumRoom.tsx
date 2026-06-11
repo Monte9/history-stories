@@ -19,6 +19,14 @@ import WalkControls, {
   saveCamera,
   type Action,
 } from "./WalkControls";
+import CameraRig, { localBodyOpacity } from "./CameraRig";
+import AvatarBody from "./AvatarBody";
+import {
+  initCamMode,
+  playerStore,
+  setCamMode,
+  subscribeCamMode,
+} from "./playerStore";
 import { focusStore } from "./focusStore";
 import {
   makeFloorTexture,
@@ -243,13 +251,13 @@ function FocusManager({
   hungs: HungPaintingList;
   registry: Map<string, (focused: boolean) => void>;
 }) {
-  const camera = useThree((s) => s.camera);
   const current = useRef("");
   const tapAnchor = useRef<{ x: number; z: number } | null>(null);
 
   useFrame(() => {
-    const cx = camera.position.x;
-    const cz = camera.position.z;
+    // The aim ray is the player's (SPEC 11.4), independent of camera mode.
+    const cx = playerStore.x;
+    const cz = playerStore.z;
     // Walking more than half a unit clears a tap-focus override.
     if (focusStore.tapSlug) {
       if (!tapAnchor.current) tapAnchor.current = { x: cx, z: cz };
@@ -262,8 +270,8 @@ function FocusManager({
     } else {
       tapAnchor.current = null;
     }
-    const heading = -THREE.MathUtils.radToDeg(camera.rotation.y);
-    const pitchDeg = THREE.MathUtils.radToDeg(camera.rotation.x);
+    const heading = playerStore.headingDeg;
+    const pitchDeg = playerStore.pitchDeg;
     let best = "";
     let bestTitle = "";
     let bestScore = Infinity;
@@ -487,6 +495,7 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
   useEffect(() => {
     setGlOk(webglAvailable());
     setCoarse(window.matchMedia("(pointer: coarse)").matches);
+    initCamMode();
     // Known before any frame renders: if the hint is going to show, the
     // prompt must never flash over it during the load reveal.
     try {
@@ -494,6 +503,25 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
     } catch {
       focusStore.hintVisible = true;
     }
+  }, []);
+
+  const [camMode, setCamModeState] = useState(playerStore.camMode);
+  useEffect(
+    () =>
+      subscribeCamMode(() => {
+        setCamModeState(playerStore.camMode);
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "KeyV") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      setCamMode(playerStore.camMode === "third" ? "first" : "third");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   const openStory = useCallback(
@@ -597,6 +625,8 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         <hemisphereLight color="#ffffff" groundColor="#cfceca" intensity={1.25} />
         <ambientLight intensity={0.6} color="#fffdf8" />
         <WalkControls />
+        <CameraRig />
+        <AvatarBody getPose={() => playerStore} getOpacity={localBodyOpacity} />
         <RoomShell />
         <Suspense fallback={null}>
           <Paintings stories={stories} onLoaded={() => setLoaded(true)} />
@@ -604,6 +634,18 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
       </Canvas>
       {loaded && <HintOverlay coarse={coarse} />}
       {loaded && <TouchControls />}
+      {loaded && (
+        <button
+          id="museum-cam-toggle"
+          aria-label="Switch camera view"
+          onClick={() =>
+            setCamMode(playerStore.camMode === "third" ? "first" : "third")
+          }
+          className="absolute top-16 right-4 z-10 rounded-full border border-[var(--color-border)] bg-black/70 px-3.5 py-1.5 text-xs text-[var(--color-text)] backdrop-blur transition-colors hover:border-[var(--color-accent-dim)] hover:text-[var(--color-accent)] sm:top-[4.25rem] sm:right-5 sm:text-sm"
+        >
+          {camMode === "third" ? "First person (V)" : "Third person (V)"}
+        </button>
+      )}
       <div
         id="museum-prompt"
         style={{ display: "none" }}

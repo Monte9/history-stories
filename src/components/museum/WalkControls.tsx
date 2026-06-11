@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { DEFAULT_SPAWN, FACE_HEADINGS, ROOM, type WallId } from "./layout";
+import { playerStore } from "./playerStore";
 
 const WALK_SPEED = 3; // units/s
 const TURN_SPEED = 100; // deg/s
@@ -84,7 +85,6 @@ const KEYMAP: Record<string, Action> = {
 };
 
 export default function WalkControls() {
-  const camera = useThree((s) => s.camera);
   const gl = useThree((s) => s.gl);
   const keys = useRef<Set<Action>>(new Set());
   const pos = useRef({ x: DEFAULT_SPAWN.x, z: DEFAULT_SPAWN.z });
@@ -95,14 +95,13 @@ export default function WalkControls() {
   const dragAccum = useRef({ heading: 0, pitch: 0 });
   const lastSave = useRef(0);
 
+  // Publish pose to playerStore (CameraRig, FocusManager, and the avatar
+  // read it) and mirror to the HUD. WalkControls no longer owns the camera.
   const apply = useCallback(() => {
-    camera.position.set(pos.current.x, ROOM.eye, pos.current.z);
-    camera.rotation.set(
-      THREE.MathUtils.degToRad(pitch.current),
-      -THREE.MathUtils.degToRad(heading.current),
-      0,
-      "YXZ",
-    );
+    playerStore.x = pos.current.x;
+    playerStore.z = pos.current.z;
+    playerStore.headingDeg = heading.current;
+    playerStore.pitchDeg = pitch.current;
     const hud = document.getElementById("museum-hud");
     if (hud) {
       hud.setAttribute("data-x", pos.current.x.toFixed(2));
@@ -113,8 +112,9 @@ export default function WalkControls() {
         ((Math.round(norm * 10) / 10) % 360).toFixed(1),
       );
       hud.setAttribute("data-pitch", pitch.current.toFixed(1));
+      hud.setAttribute("data-speed", playerStore.speed.toFixed(2));
     }
-  }, [camera]);
+  }, []);
 
   // Layout effect: the restored camera must be in place before the first
   // rendered frame, or FocusManager briefly focuses along the default view.
@@ -239,6 +239,11 @@ export default function WalkControls() {
       vel.current.turn = 0;
       wheelVel.current.walk = 0;
       wheelVel.current.turn = 0;
+      if (playerStore.speed !== 0 || playerStore.turnRate !== 0) {
+        playerStore.speed = 0;
+        playerStore.turnRate = 0;
+        apply();
+      }
       return;
     }
     // Inputs sum into one velocity; the keyboard speed caps the total.
@@ -256,6 +261,9 @@ export default function WalkControls() {
     wheelVel.current.walk *= decay;
     wheelVel.current.turn *= decay;
 
+    const prevX = pos.current.x;
+    const prevZ = pos.current.z;
+    const prevHeading = heading.current;
     heading.current += turn * dt + drag.heading;
     pitch.current = THREE.MathUtils.clamp(
       pitch.current + drag.pitch,
@@ -275,6 +283,11 @@ export default function WalkControls() {
       -CLAMP,
       CLAMP,
     );
+    // Signed planar speed from actual displacement (clamping at a wall
+    // reads as 0, so the gait never marches in place against a wall).
+    const planar = Math.hypot(pos.current.x - prevX, pos.current.z - prevZ);
+    playerStore.speed = (walk < 0 ? -1 : 1) * (planar / dt);
+    playerStore.turnRate = (heading.current - prevHeading) / dt;
     apply();
     const now = performance.now();
     if (!savesLocked && now - lastSave.current > 500) {
