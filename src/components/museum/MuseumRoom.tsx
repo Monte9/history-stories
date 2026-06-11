@@ -12,7 +12,7 @@ import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import Painting from "./Painting";
-import WalkControls from "./WalkControls";
+import WalkControls, { lockSaves, saveCamera } from "./WalkControls";
 import { makeTextTexture } from "./textures";
 import {
   buildLayout,
@@ -280,6 +280,15 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         ?.getAttribute("data-focused");
       if (slug) {
         e.preventDefault();
+        // Persist the camera synchronously so Escape returns here exactly.
+        const hud = document.getElementById("museum-hud");
+        const x = parseFloat(hud?.getAttribute("data-x") || "");
+        const z = parseFloat(hud?.getAttribute("data-z") || "");
+        const heading = parseFloat(hud?.getAttribute("data-heading") || "");
+        if (!Number.isNaN(x) && !Number.isNaN(z) && !Number.isNaN(heading)) {
+          saveCamera(x, z, heading);
+          lockSaves();
+        }
         router.push(`/${slug}`);
       }
     };

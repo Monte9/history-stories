@@ -10,6 +10,46 @@ const TURN_SPEED = 100; // deg/s
 const SMOOTH = 0.15; // s to ~reach target velocity
 const CLAMP = ROOM.half - ROOM.margin;
 
+export const CAMERA_KEY = "museum.camera.v1";
+
+// Once Enter-navigation saves the camera, residual velocity decay must not
+// overwrite it before the room unmounts.
+let savesLocked = false;
+
+export function lockSaves() {
+  savesLocked = true;
+}
+
+export function saveCamera(x: number, z: number, headingDeg: number) {
+  try {
+    sessionStorage.setItem(
+      CAMERA_KEY,
+      JSON.stringify({ x, z, headingDeg, savedAt: Date.now() }),
+    );
+  } catch {}
+}
+
+function restoreCamera(): { x: number; z: number; headingDeg: number } | null {
+  try {
+    const raw = sessionStorage.getItem(CAMERA_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    if (
+      typeof v.x !== "number" ||
+      typeof v.z !== "number" ||
+      typeof v.headingDeg !== "number"
+    )
+      return null;
+    return {
+      x: THREE.MathUtils.clamp(v.x, -CLAMP, CLAMP),
+      z: THREE.MathUtils.clamp(v.z, -CLAMP, CLAMP),
+      headingDeg: v.headingDeg,
+    };
+  } catch {
+    return null;
+  }
+}
+
 type Action = "fwd" | "back" | "left" | "right";
 
 const KEYMAP: Record<string, Action> = {
@@ -29,6 +69,7 @@ export default function WalkControls() {
   const pos = useRef({ x: DEFAULT_SPAWN.x, z: DEFAULT_SPAWN.z });
   const heading = useRef(DEFAULT_SPAWN.headingDeg);
   const vel = useRef({ walk: 0, turn: 0 });
+  const lastSave = useRef(0);
 
   const apply = useCallback(() => {
     camera.position.set(pos.current.x, ROOM.eye, pos.current.z);
@@ -50,12 +91,20 @@ export default function WalkControls() {
   }, [camera]);
 
   useEffect(() => {
+    savesLocked = false;
     const face = new URLSearchParams(window.location.search).get(
       "face",
     ) as WallId | null;
     if (face && face in FACE_HEADINGS) {
+      // Eval/debug affordance: overrides any saved camera for this load.
       pos.current = { x: 0, z: 0 };
       heading.current = FACE_HEADINGS[face];
+    } else {
+      const saved = restoreCamera();
+      if (saved) {
+        pos.current = { x: saved.x, z: saved.z };
+        heading.current = saved.headingDeg;
+      }
     }
     apply();
 
@@ -114,6 +163,11 @@ export default function WalkControls() {
       CLAMP,
     );
     apply();
+    const now = performance.now();
+    if (!savesLocked && now - lastSave.current > 500) {
+      lastSave.current = now;
+      saveCamera(pos.current.x, pos.current.z, heading.current);
+    }
   });
 
   return null;

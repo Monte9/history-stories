@@ -1,6 +1,8 @@
 import { getAllSlugs, getStoryBySlug } from "@/lib/stories";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import CoverCarousel from "@/components/CoverCarousel";
+import EscapeReturn from "@/components/EscapeReturn";
 
 const traditionColors: Record<string, string> = {
   roman: "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -31,21 +33,30 @@ export default async function StoryPage({
 
   return (
     <div className="min-h-screen">
-      {/* Hero */}
-      {story.cover && (
-        <div className="relative h-[50vh] min-h-[300px] overflow-hidden">
-          <img
-            src={story.cover}
-            alt={story.title}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)] via-[var(--color-bg)]/60 to-transparent" />
-        </div>
+      <EscapeReturn />
+      {/* Triptych hero */}
+      {story.covers.length > 0 && (
+        <CoverCarousel
+          covers={story.covers}
+          title={story.title}
+          tradition={story.tradition}
+        />
       )}
 
       {/* Content */}
       <article className="relative mx-auto max-w-2xl px-6 pb-16">
-        <div className={story.cover ? "-mt-24" : "pt-12"}>
+        <div className="pt-10">
+          <div className="mb-5">
+            <Link
+              href="/"
+              className="text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-accent)]"
+            >
+              ← Back to the museum{" "}
+              <span className="rounded border border-[var(--color-border)] px-1.5 py-0.5 text-xs">
+                Esc
+              </span>
+            </Link>
+          </div>
           {/* Meta */}
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span
