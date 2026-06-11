@@ -1,7 +1,15 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { Canvas, useLoader } from "@react-three/fiber";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
+import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import Painting from "./Painting";
 import WalkControls from "./WalkControls";
@@ -133,6 +141,63 @@ function WallLabel({ wall }: { wall: WallId }) {
   );
 }
 
+const FOCUS_DISTANCE = 3.0;
+const FOCUS_HALF_ANGLE = 35;
+
+function FocusManager({
+  hungs,
+  registry,
+}: {
+  hungs: HungPaintingList;
+  registry: Map<string, (focused: boolean) => void>;
+}) {
+  const camera = useThree((s) => s.camera);
+  const current = useRef("");
+
+  useFrame(() => {
+    const cx = camera.position.x;
+    const cz = camera.position.z;
+    const heading = -THREE.MathUtils.radToDeg(camera.rotation.y);
+    let best = "";
+    let bestTitle = "";
+    let bestAngle = Infinity;
+    for (const h of hungs) {
+      const dx = h.position[0] - cx;
+      const dz = h.position[2] - cz;
+      const dist = Math.hypot(dx, dz);
+      if (dist >= FOCUS_DISTANCE) continue;
+      const dirAngle = THREE.MathUtils.radToDeg(Math.atan2(dx, -dz));
+      const diff = Math.abs(
+        ((dirAngle - heading) % 360 + 540) % 360 - 180,
+      );
+      if (diff > FOCUS_HALF_ANGLE) continue;
+      if (diff < bestAngle) {
+        bestAngle = diff;
+        best = h.story.slug;
+        bestTitle = h.story.title;
+      }
+    }
+    if (best === current.current) return;
+    registry.get(current.current)?.(false);
+    registry.get(best)?.(true);
+    current.current = best;
+    document.getElementById("museum-hud")?.setAttribute("data-focused", best);
+    const prompt = document.getElementById("museum-prompt");
+    const title = document.getElementById("museum-prompt-title");
+    if (prompt && title) {
+      if (best) {
+        title.textContent = bestTitle;
+        prompt.style.display = "flex";
+      } else {
+        prompt.style.display = "none";
+      }
+    }
+  });
+  return null;
+}
+
+type HungPaintingList = ReturnType<typeof buildLayout>["walls"][WallId];
+
 function Paintings({
   stories,
   onLoaded,
@@ -144,6 +209,22 @@ function Paintings({
   const hungs = useMemo(
     () => (Object.keys(layout.walls) as WallId[]).flatMap((w) => layout.walls[w]),
     [layout],
+  );
+  const registry = useMemo(
+    () => new Map<string, (focused: boolean) => void>(),
+    [],
+  );
+  const register = useCallback(
+    (slug: string, fn: (focused: boolean) => void) => {
+      registry.set(slug, fn);
+    },
+    [registry],
+  );
+  const unregister = useCallback(
+    (slug: string) => {
+      registry.delete(slug);
+    },
+    [registry],
   );
   const textures = useLoader(
     THREE.TextureLoader,
@@ -171,17 +252,40 @@ function Paintings({
   return (
     <group>
       {hungs.map((hung, i) => (
-        <Painting key={hung.story.slug + i} hung={hung} texture={textures[i]} />
+        <Painting
+          key={hung.story.slug + i}
+          hung={hung}
+          texture={textures[i]}
+          onRegister={register}
+          onUnregister={unregister}
+        />
       ))}
       {(["roman", "ramayana", "mahabharata"] as WallId[]).map((w) =>
         layout.walls[w].length > 0 ? <WallLabel key={w} wall={w} /> : null,
       )}
+      <FocusManager hungs={hungs} registry={registry} />
     </group>
   );
 }
 
 export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
   const [loaded, setLoaded] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      const slug = document
+        .getElementById("museum-hud")
+        ?.getAttribute("data-focused");
+      if (slug) {
+        e.preventDefault();
+        router.push(`/${slug}`);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [router]);
 
   return (
     <div className="absolute inset-0">
@@ -219,6 +323,21 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         </Suspense>
       </Canvas>
       {loaded && <HintOverlay />}
+      <div
+        id="museum-prompt"
+        style={{ display: "none" }}
+        aria-live="polite"
+        className="absolute bottom-8 left-1/2 z-20 max-w-[92vw] -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--color-accent-dim)] bg-black/70 px-5 py-2.5 backdrop-blur"
+      >
+        <span
+          id="museum-prompt-title"
+          className="truncate text-sm font-medium text-[var(--color-text)]"
+        />
+        <span className="shrink-0 text-sm text-[var(--color-text-muted)]">
+          — Press <span className="text-[var(--color-accent)]">Enter</span> to
+          view
+        </span>
+      </div>
       <div
         aria-hidden
         className={`pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--color-bg)] transition-opacity duration-700 ${

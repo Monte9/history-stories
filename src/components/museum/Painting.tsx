@@ -5,22 +5,44 @@ import * as THREE from "three";
 import { makeTextTexture } from "./textures";
 import type { HungPainting } from "./layout";
 
+const SPOT_INTENSITY = 26;
+const SPOT_FOCUSED = 42;
+
 export default function Painting({
   hung,
   texture,
+  onRegister,
+  onUnregister,
 }: {
   hung: HungPainting;
   texture: THREE.Texture;
+  onRegister?: (slug: string, setFocus: (focused: boolean) => void) => void;
+  onUnregister?: (slug: string) => void;
 }) {
   const { width, height, position, rotationY, story } = hung;
   const spotRef = useRef<THREE.SpotLight>(null);
   const targetRef = useRef<THREE.Object3D>(null);
+  const frameMatRef = useRef<THREE.MeshStandardMaterial>(null);
 
   useEffect(() => {
     if (spotRef.current && targetRef.current) {
       spotRef.current.target = targetRef.current;
     }
   }, []);
+
+  useEffect(() => {
+    const setFocus = (focused: boolean) => {
+      if (frameMatRef.current) {
+        frameMatRef.current.emissive.set(focused ? "#9a7a36" : "#000000");
+        frameMatRef.current.emissiveIntensity = focused ? 0.85 : 0;
+      }
+      if (spotRef.current) {
+        spotRef.current.intensity = focused ? SPOT_FOCUSED : SPOT_INTENSITY;
+      }
+    };
+    onRegister?.(story.slug, setFocus);
+    return () => onUnregister?.(story.slug);
+  }, [story.slug, onRegister, onUnregister]);
 
   const placard = useMemo(
     () =>
@@ -40,7 +62,12 @@ export default function Painting({
       {/* frame */}
       <mesh position={[0, 0, -0.045]}>
         <boxGeometry args={[width + 0.28, height + 0.28, 0.1]} />
-        <meshStandardMaterial color="#4a3a22" metalness={0.55} roughness={0.45} />
+        <meshStandardMaterial
+          ref={frameMatRef}
+          color="#4a3a22"
+          metalness={0.55}
+          roughness={0.45}
+        />
       </mesh>
       {/* canvas */}
       <mesh position={[0, 0, 0.012]}>
@@ -59,7 +86,7 @@ export default function Painting({
         position={[0, height / 2 + 1.6, 2.1]}
         angle={0.62}
         penumbra={0.75}
-        intensity={26}
+        intensity={SPOT_INTENSITY}
         distance={9}
         decay={1.6}
         color="#ffe2b0"
