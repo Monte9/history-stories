@@ -16,12 +16,12 @@ You are the planner. Turn the goal into a spec and a backlog of sprints that a g
 ## Outputs
 
 - `agent/SPEC.md` - the product spec: information architecture, pages, components, data model. Concrete enough that two readers would build roughly the same site
-- `agent/BACKLOG.md` - ordered sprints, each with 3-6 acceptance criteria
+- `agent/BACKLOG.md` - ordered sprints, each with a clear sprint goal and 3-6 DRAFT acceptance criteria. Drafts are finalized at sprint start by builder/evaluator alignment (see the build-sprint skill); write your best proposal and mark the list "draft".
 
 ## Rules for sprints
 
 - One sprint must be buildable and evaluable in a single run. If it has more than ~6 acceptance criteria, split it.
 - Acceptance criteria must be verifiable by interacting with the running site (clickable, typeable, observable). "Code is clean" is not a criterion.
-- Every sprint must keep `pnpm build` (static export) green. No features that require a server.
+- Every sprint must keep `pnpm build` (static export) green. The site itself stays statically hosted; anything needing connectivity or credentials must follow the constraints in `agent/GOAL.md`.
 - Order by user value, then by dependency. Re-order freely; never delete history of done/blocked sprints, mark them.
 - When replanning after blocked sprints, read the verdict files in `agent/evals/` first. Restructure around the failure, don't just retry the same shape.
