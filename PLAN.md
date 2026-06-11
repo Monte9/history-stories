@@ -12,7 +12,7 @@ A growing library of short, well-written historical stories spanning Roman histo
 
 ## Current State
 
-**Live at [historystories.vercel.app](https://historystories.vercel.app).** Auto-deploys from `nexuslabsx/history-stories` on push.
+**Live at [historystories.vercel.app](https://historystories.vercel.app).** Auto-deploys from [`Monte9/history-stories`](https://github.com/Monte9/history-stories) on push. Repo is public.
 
 - 7 stories published (3 Ramayana, 2 Roman, 2 Mahabharata)
 - Characters covered: Scipio Aemilianus, Karna, Jatayu, Marcus Aurelius, Hanuman, Rama, Ashwatthama
@@ -48,8 +48,7 @@ A growing library of short, well-written historical stories spanning Roman histo
 - **RSS feed** — static XML for subscribers
 - **OG images + social sharing** — cover art as Twitter/OG cards
 - **Audio narration** — TTS per story, embedded player
-- **Make repo public** — no secrets in code, safe to open source
 
 ---
 
-*Updated: 2026-04-06*
+*Updated: 2026-06-11*

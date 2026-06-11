@@ -108,7 +108,7 @@ export default function Home() {
       <footer className="border-t border-[var(--color-border)] py-8 text-center text-sm text-[var(--color-text-muted)]">
         Built by the{" "}
         <a
-          href="https://github.com/ashokosnexus"
+          href="https://github.com/Monte9/history-stories"
           className="text-[var(--color-accent-dim)] hover:text-[var(--color-accent)]"
           target="_blank"
           rel="noopener noreferrer"

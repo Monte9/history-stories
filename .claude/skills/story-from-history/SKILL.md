@@ -12,7 +12,7 @@ Generates a historical reflection with a cinematic cover image, publishes it to 
 - `uv` installed (for nano-banana image generation)
 - `GEMINI_API_KEY` set in environment
 - `GITHUB_TOKEN` set in environment (for git push)
-- Vercel auto-deploys on push (GitHub app connected to nexuslabsx org)
+- Vercel auto-deploys on push (GitHub app connected to `Monte9/history-stories`)
 - Run from the History Stories repo root when possible
 
 ## Project path
