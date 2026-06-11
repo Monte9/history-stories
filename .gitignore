@@ -8,3 +8,4 @@ agent/evals/shots/
 public/covers/thumbs/
 
 agent/evals/tmp/
+next-env.d.ts
