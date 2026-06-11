@@ -100,7 +100,7 @@ Acceptance criteria:
 - Gaze focus: at `/?face=roman` (room center, paintings > 3 units away) `data-focused` is the slug of the painting at view center; turning hands focus to the next painting as it crosses center; aiming at a corner or empty wall stretch clears `data-focused` and hides the prompt; Enter on a gaze-focused distant painting opens its story and Escape returns to the saved spot
 - Coexistence and copy: keyboard arrows/WASD and the 390px touch cluster still move through the same HUD pipeline; the hint overlay and curator placard legend now mention scroll and drag; no em dashes in new copy; zero console errors; `pnpm build` green
 
-## Sprint 9: Touch and copy polish — pending (folds the original Sprint 7 items)
+## Sprint 9: Touch and copy polish — done (2026-06-11, PASS)
 
 Deterministic refinements carried over from the sprint 6 evaluator sweep, done before the taste audit so the audit is not noise. The old "tap-to-focus distance rule" item is dropped: SPEC 4.2 now documents remote open as intended under gaze focus.
 
