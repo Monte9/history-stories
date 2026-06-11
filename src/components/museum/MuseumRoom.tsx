@@ -1,14 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { Canvas, useLoader, useThree } from "@react-three/fiber";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Canvas, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 import Painting from "./Painting";
+import WalkControls from "./WalkControls";
 import { makeTextTexture } from "./textures";
 import {
   buildLayout,
-  DEFAULT_SPAWN,
-  FACE_HEADINGS,
   ROOM,
   WALL_DEFS,
   WALL_LABELS,
@@ -23,27 +22,54 @@ function setHud(attrs: Record<string, string>) {
   for (const [k, v] of Object.entries(attrs)) hud.setAttribute(k, v);
 }
 
-function CameraRig() {
-  const camera = useThree((s) => s.camera);
+const HINT_KEY = "museum.hintSeen.v1";
+
+function HintOverlay() {
+  const [show, setShow] = useState(false);
+
+  const dismiss = useCallback(() => {
+    setShow(false);
+    try {
+      localStorage.setItem(HINT_KEY, "1");
+    } catch {}
+  }, []);
+
   useEffect(() => {
-    const face = new URLSearchParams(window.location.search).get(
-      "face",
-    ) as WallId | null;
-    let { x, z, headingDeg } = DEFAULT_SPAWN;
-    if (face && face in FACE_HEADINGS) {
-      x = 0;
-      z = 0;
-      headingDeg = FACE_HEADINGS[face];
+    try {
+      if (!localStorage.getItem(HINT_KEY)) setShow(true);
+    } catch {
+      setShow(true);
     }
-    camera.position.set(x, ROOM.eye, z);
-    camera.rotation.set(0, -THREE.MathUtils.degToRad(headingDeg), 0, "YXZ");
-    setHud({
-      "data-x": x.toFixed(2),
-      "data-z": z.toFixed(2),
-      "data-heading": ((headingDeg % 360) + 360 % 360).toFixed(1),
-    });
-  }, [camera]);
-  return null;
+  }, []);
+
+  useEffect(() => {
+    if (!show) return;
+    const onKey = () => dismiss();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [show, dismiss]);
+
+  if (!show) return null;
+  return (
+    <div
+      id="museum-hint"
+      className="absolute bottom-8 left-1/2 z-10 flex max-w-[92vw] -translate-x-1/2 items-center gap-3 rounded-full border border-[var(--color-border)] bg-black/60 px-5 py-2.5 backdrop-blur"
+    >
+      <p className="text-xs text-[var(--color-text-muted)] sm:text-sm">
+        <span className="text-[var(--color-text)]">Arrow keys</span> to walk
+        and turn · <span className="text-[var(--color-text)]">Enter</span> to
+        view a painting ·{" "}
+        <span className="text-[var(--color-text)]">Esc</span> to step back
+      </p>
+      <button
+        onClick={dismiss}
+        aria-label="Dismiss hint"
+        className="rounded-full px-1.5 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+      >
+        ×
+      </button>
+    </div>
+  );
 }
 
 function RoomShell() {
@@ -186,12 +212,13 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         <color attach="background" args={["#0a0a0f"]} />
         <fog attach="fog" args={["#0a0a0f", 22, 45]} />
         <ambientLight intensity={0.35} color="#8d92c4" />
-        <CameraRig />
+        <WalkControls />
         <RoomShell />
         <Suspense fallback={null}>
           <Paintings stories={stories} onLoaded={() => setLoaded(true)} />
         </Suspense>
       </Canvas>
+      {loaded && <HintOverlay />}
       <div
         aria-hidden
         className={`pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--color-bg)] transition-opacity duration-700 ${
