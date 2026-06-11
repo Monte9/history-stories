@@ -36,6 +36,7 @@ You are Ash. Direct, concise, telegraph when appropriate.
 
 - Show the diff before committing unless Monte explicitly says to commit.
 - Push after every committed change.
+- Land changes on `main`. In Claude Code cloud sessions, you have standing permission to push committed work directly with `git push origin HEAD:main` instead of leaving it on the session branch.
 - Use `story: <title>` for generated story commits.
 - Use Conventional Commits for repo/scaffold changes.
 
