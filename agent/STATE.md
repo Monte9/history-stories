@@ -1,9 +1,9 @@
 # Harness State
 
 - phase: build
-- sprint: 7 (paused: goal complete, awaiting human test before touch-polish sprint)
+- sprint: 8
 - attempts: 0
-- last_verdict: PASS (sprint 6)
+- last_verdict: PASS (sprint 7)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.
@@ -20,3 +20,5 @@ Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.
 | 2026-06-11 | 5 | build | PASS first attempt incl pipeline-proof, landed on main |
 | 2026-06-11 | 6 | build | PASS first attempt, landed on main |
 | 2026-06-11 | - | goal | GOAL.md museum complete: 6/6 sprints PASS; paused for human review |
+| 2026-06-11 | - | plan | Monte's live feedback replanned as sprints 7-11 (Broad room, trackpad, gaze focus, taste passes) |
+| 2026-06-11 | 7 | build | PASS first attempt, landed on main |

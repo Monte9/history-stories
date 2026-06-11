@@ -76,7 +76,7 @@ Acceptance criteria:
 - Initial load shows a loading state or fade-in, never a flash of black/untextured geometry; `data-loaded` flips to `"true"` and the room is fully textured in the post-load screenshot
 - Full keyboard journey at 1280px with zero console errors: spawn → turn → walk to the Rome wall → focus → Enter → cycle the carousel → Escape (position preserved) → walk to Wall 4 → open a New Acquisition
 
-## Sprint 7: The Broad room rework (daylight gallery) — pending
+## Sprint 7: The Broad room rework (daylight gallery) — done (2026-06-11, PASS)
 
 Monte's feedback item 1. Replace the night room with the Broad-style daylight gallery per SPEC 2.1-2.3: white walls, light polished-concrete floor, glowing honeycomb veil ceiling (canvas-generated emissive texture), hemisphere + ambient rig, fog removed, thin frames, dark-on-light placards and darkened tradition-tint wall labels, restyled curator placard (no "Night Gallery"), tradition-tinted focus outline visible in daylight (SPEC 4.2). Keep the HUD contract, `?face=`, controls, and focus *rule* untouched — this sprint is look only; the gaze rule lands in Sprint 8.
 
