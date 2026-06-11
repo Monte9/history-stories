@@ -40,6 +40,16 @@ export const WALL_TINTS: Record<WallId, string> = {
   curator: "#c084fc",
 };
 
+// Darkened tints legible on the white walls (SPEC 2.2); the saturated
+// WALL_TINTS above stay for the dark DOM chrome (prompt border) and the
+// focus outline, which needs to pop against white.
+export const WALL_TINTS_DARK: Record<WallId, string> = {
+  roman: "#92600b",
+  ramayana: "#066e54",
+  mahabharata: "#1e4fae",
+  curator: "#6d28d9",
+};
+
 const WALL_OFFSET = 0.08; // lift paintings off the wall plane to avoid z-fighting
 
 interface WallDef {

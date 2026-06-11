@@ -4,10 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { makeTextTexture } from "./textures";
 import { focusStore } from "./focusStore";
-import type { HungPainting } from "./layout";
-
-const SPOT_INTENSITY = 26;
-const SPOT_FOCUSED = 42;
+import { WALL_TINTS, type HungPainting } from "./layout";
 
 export default function Painting({
   hung,
@@ -21,38 +18,33 @@ export default function Painting({
   onUnregister?: (slug: string) => void;
 }) {
   const { width, height, position, rotationY, story } = hung;
-  const spotRef = useRef<THREE.SpotLight>(null);
-  const targetRef = useRef<THREE.Object3D>(null);
-  const frameMatRef = useRef<THREE.MeshStandardMaterial>(null);
-
-  useEffect(() => {
-    if (spotRef.current && targetRef.current) {
-      spotRef.current.target = targetRef.current;
-    }
-  }, []);
+  const outlineRef = useRef<THREE.Mesh>(null);
+  const canvasMatRef = useRef<THREE.MeshStandardMaterial>(null);
 
   useEffect(() => {
     const setFocus = (focused: boolean) => {
-      if (frameMatRef.current) {
-        frameMatRef.current.emissive.set(focused ? "#9a7a36" : "#000000");
-        frameMatRef.current.emissiveIntensity = focused ? 0.85 : 0;
-      }
-      if (spotRef.current) {
-        spotRef.current.intensity = focused ? SPOT_FOCUSED : SPOT_INTENSITY;
+      if (outlineRef.current) outlineRef.current.visible = focused;
+      if (canvasMatRef.current) {
+        // Slight lift so the focused canvas reads brighter in daylight.
+        canvasMatRef.current.emissive.set(focused ? "#ffffff" : "#000000");
+        canvasMatRef.current.emissiveMap = focused ? texture : null;
+        canvasMatRef.current.emissiveIntensity = focused ? 0.35 : 0;
+        canvasMatRef.current.needsUpdate = true;
       }
     };
     onRegister?.(story.slug, setFocus);
     return () => onUnregister?.(story.slug);
-  }, [story.slug, onRegister, onUnregister]);
+  }, [story.slug, texture, onRegister, onUnregister]);
 
   const placard = useMemo(
     () =>
       makeTextTexture(story.title, {
-        color: "#e6e6f2",
+        color: "#2b2b2b",
         fontPx: 48,
         weight: "400",
         letterSpacing: 0.04,
-        background: "rgba(10, 9, 14, 0.85)",
+        background: "#fbfaf7",
+        border: "#d8d5cd",
       }),
     [story.title],
   );
@@ -73,6 +65,10 @@ export default function Painting({
     [hung.badge],
   );
 
+  // Thin gallery frame (SPEC 2.2): ~0.07 border per side, shallow depth.
+  const frameW = width + 0.14;
+  const frameH = height + 0.14;
+
   return (
     <group
       position={position}
@@ -90,25 +86,30 @@ export default function Painting({
         }
       }}
     >
+      {/* focus outline: tradition tint, visible against white walls */}
+      <mesh ref={outlineRef} visible={false} position={[0, 0, -0.05]}>
+        <planeGeometry args={[frameW + 0.16, frameH + 0.16]} />
+        <meshBasicMaterial color={WALL_TINTS[story.tradition]} />
+      </mesh>
       {/* frame */}
-      <mesh position={[0, 0, -0.045]}>
-        <boxGeometry args={[width + 0.28, height + 0.28, 0.1]} />
-        <meshStandardMaterial
-          ref={frameMatRef}
-          color="#4a3a22"
-          metalness={0.55}
-          roughness={0.45}
-        />
+      <mesh position={[0, 0, -0.025]}>
+        <boxGeometry args={[frameW, frameH, 0.06]} />
+        <meshStandardMaterial color="#26221e" metalness={0.1} roughness={0.6} />
       </mesh>
       {/* canvas */}
       <mesh position={[0, 0, 0.012]}>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial map={texture} roughness={0.85} metalness={0} />
+        <meshStandardMaterial
+          ref={canvasMatRef}
+          map={texture}
+          roughness={0.85}
+          metalness={0}
+        />
       </mesh>
       {/* placard */}
       <mesh position={[0, -(height / 2 + 0.32), 0.012]}>
         <planeGeometry args={[placardW, placardH]} />
-        <meshBasicMaterial map={placard.texture} transparent opacity={0.95} />
+        <meshBasicMaterial map={placard.texture} />
       </mesh>
       {/* badge tag */}
       {badge && (
@@ -120,18 +121,6 @@ export default function Painting({
           <meshBasicMaterial map={badge.texture} />
         </mesh>
       )}
-      {/* picture light */}
-      <object3D ref={targetRef} position={[0, 0, 0]} />
-      <spotLight
-        ref={spotRef}
-        position={[0, height / 2 + 1.6, 2.1]}
-        angle={0.62}
-        penumbra={0.75}
-        intensity={SPOT_INTENSITY}
-        distance={9}
-        decay={1.6}
-        color="#ffe2b0"
-      />
     </group>
   );
 }

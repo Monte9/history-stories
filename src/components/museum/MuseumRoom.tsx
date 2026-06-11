@@ -20,7 +20,12 @@ import WalkControls, {
   type Action,
 } from "./WalkControls";
 import { focusStore } from "./focusStore";
-import { makePlacardTexture, makeTextTexture } from "./textures";
+import {
+  makeFloorTexture,
+  makePlacardTexture,
+  makeTextTexture,
+  makeVeilTexture,
+} from "./textures";
 import {
   buildLayout,
   CURATOR,
@@ -28,6 +33,7 @@ import {
   WALL_DEFS,
   WALL_LABELS,
   WALL_TINTS,
+  WALL_TINTS_DARK,
   type MuseumStory,
   type WallId,
 } from "./layout";
@@ -90,18 +96,20 @@ function HintOverlay() {
 
 function RoomShell() {
   const { half, height } = ROOM;
-  const wallMat = { color: "#16141d", roughness: 0.92, metalness: 0.05 };
+  const wallMat = { color: "#f2f1ed", roughness: 0.95, metalness: 0 };
+  const floor = useMemo(() => makeFloorTexture(), []);
+  const veil = useMemo(() => makeVeilTexture(), []);
   return (
     <group>
-      {/* floor */}
+      {/* floor: light polished concrete */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[ROOM.size, ROOM.size]} />
-        <meshStandardMaterial color="#0d0c13" roughness={0.4} metalness={0.25} />
+        <meshStandardMaterial map={floor} roughness={0.4} metalness={0.08} />
       </mesh>
-      {/* ceiling */}
+      {/* ceiling: the veil, emissive so it reads as the skylight */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, height, 0]}>
         <planeGeometry args={[ROOM.size, ROOM.size]} />
-        <meshStandardMaterial color="#07070b" roughness={1} />
+        <meshBasicMaterial map={veil} />
       </mesh>
       {/* walls: north, east, south, west */}
       <mesh position={[0, height / 2, -half]}>
@@ -128,7 +136,7 @@ function WallLabel({ wall, t = 0 }: { wall: WallId; t?: number }) {
   const label = useMemo(
     () =>
       makeTextTexture(WALL_LABELS[wall], {
-        color: WALL_TINTS[wall],
+        color: WALL_TINTS_DARK[wall],
         fontPx: 110,
         weight: "600",
         letterSpacing: 0.34,
@@ -142,22 +150,14 @@ function WallLabel({ wall, t = 0 }: { wall: WallId; t?: number }) {
     <group position={def.point(t, 4.35)} rotation={[0, def.rotationY, 0]}>
       <mesh>
         <planeGeometry args={[w, h]} />
-        <meshBasicMaterial map={label.texture} transparent opacity={0.92} />
+        <meshBasicMaterial map={label.texture} transparent />
       </mesh>
-      <pointLight position={[0, -0.4, 1.2]} intensity={3} distance={4.5} color={WALL_TINTS[wall]} />
     </group>
   );
 }
 
 function CuratorPlacard() {
   const plate = useMemo(() => makePlacardTexture(), []);
-  const spotRef = useRef<THREE.SpotLight>(null);
-  const targetRef = useRef<THREE.Object3D>(null);
-  useEffect(() => {
-    if (spotRef.current && targetRef.current) {
-      spotRef.current.target = targetRef.current;
-    }
-  }, []);
   const w = CURATOR.placardW;
   const h = w / plate.aspect;
   const def = WALL_DEFS.curator;
@@ -166,50 +166,15 @@ function CuratorPlacard() {
       position={def.point(CURATOR.placardT, CURATOR.placardY)}
       rotation={[0, def.rotationY, 0]}
     >
-      <mesh position={[0, 0, -0.045]}>
-        <boxGeometry args={[w + 0.3, h + 0.3, 0.1]} />
-        <meshStandardMaterial color="#4a3a22" metalness={0.55} roughness={0.45} />
+      <mesh position={[0, 0, -0.025]}>
+        <boxGeometry args={[w + 0.14, h + 0.14, 0.06]} />
+        <meshStandardMaterial color="#26221e" metalness={0.1} roughness={0.6} />
       </mesh>
       <mesh position={[0, 0, 0.012]}>
         <planeGeometry args={[w, h]} />
         <meshStandardMaterial map={plate.texture} roughness={0.8} metalness={0} />
       </mesh>
-      <object3D ref={targetRef} position={[0, 0, 0]} />
-      <spotLight
-        ref={spotRef}
-        position={[0, h / 2 + 1.6, 2.1]}
-        angle={0.7}
-        penumbra={0.7}
-        intensity={34}
-        distance={9}
-        decay={1.6}
-        color="#ffe2b0"
-      />
     </group>
-  );
-}
-
-// Dim cool fills so the corners never go pitch black between light pools.
-function CornerFills() {
-  const r = ROOM.half - 3;
-  return (
-    <>
-      {[
-        [r, r],
-        [r, -r],
-        [-r, r],
-        [-r, -r],
-      ].map(([x, z], i) => (
-        <pointLight
-          key={i}
-          position={[x, 3.4, z]}
-          intensity={1.8}
-          distance={10}
-          decay={1.8}
-          color="#565478"
-        />
-      ))}
-    </>
   );
 }
 
@@ -524,10 +489,9 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         dpr={[1, 2]}
         camera={{ fov: 70, near: 0.1, far: 80 }}
       >
-        <color attach="background" args={["#0a0a0f"]} />
-        <fog attach="fog" args={["#0a0a0f", 22, 45]} />
-        <ambientLight intensity={0.24} color="#8d92c4" />
-        <CornerFills />
+        <color attach="background" args={["#e9e8e4"]} />
+        <hemisphereLight color="#ffffff" groundColor="#cfceca" intensity={1.25} />
+        <ambientLight intensity={0.6} color="#fffdf8" />
         <WalkControls />
         <RoomShell />
         <Suspense fallback={null}>

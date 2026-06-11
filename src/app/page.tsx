@@ -19,7 +19,7 @@ export default function Home() {
       <MuseumClient stories={stories} />
       {/* Shell overlay: server-rendered, works without JS/WebGL */}
       <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4 sm:p-5">
-        <h1 className="text-xs font-semibold tracking-[0.3em] text-[var(--color-text)] uppercase sm:text-sm">
+        <h1 className="rounded-full bg-black/40 px-3.5 py-1.5 text-xs font-semibold tracking-[0.3em] text-[var(--color-text)] uppercase backdrop-blur sm:text-sm">
           History Stories
         </h1>
         <Link

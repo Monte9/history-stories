@@ -4,12 +4,13 @@ import * as THREE from "three";
 export function makeTextTexture(
   text: string,
   {
-    color = "#f0f0f5",
+    color = "#2b2b2b",
     fontPx = 96,
     font = "Georgia, 'Times New Roman', serif",
     weight = "600",
     letterSpacing = 0.18,
     background = "",
+    border = "",
   } = {},
 ): { texture: THREE.CanvasTexture; aspect: number } {
   const canvas = document.createElement("canvas");
@@ -26,6 +27,16 @@ export function makeTextTexture(
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
+  if (border) {
+    ctx.strokeStyle = border;
+    ctx.lineWidth = Math.max(2, fontPx * 0.04);
+    ctx.strokeRect(
+      ctx.lineWidth / 2,
+      ctx.lineWidth / 2,
+      canvas.width - ctx.lineWidth,
+      canvas.height - ctx.lineWidth,
+    );
+  }
   ctx.fillStyle = color;
   ctx.textBaseline = "middle";
   let x = pad;
@@ -40,7 +51,7 @@ export function makeTextTexture(
 }
 
 // The entrance placard: museum title, subtitle, and the controls legend,
-// rendered as one plate texture.
+// rendered as one light plate texture (wall label on white, per SPEC 2.2).
 export function makePlacardTexture(): {
   texture: THREE.CanvasTexture;
   aspect: number;
@@ -51,37 +62,37 @@ export function makePlacardTexture(): {
   const ctx = canvas.getContext("2d")!;
   const cx = canvas.width / 2;
 
-  ctx.fillStyle = "#16121c";
+  ctx.fillStyle = "#fbfaf7";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = "#5b4a78";
-  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#cfccc4";
+  ctx.lineWidth = 4;
   ctx.strokeRect(26, 26, canvas.width - 52, canvas.height - 52);
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  ctx.fillStyle = "#efe7d4";
+  ctx.fillStyle = "#21201d";
   ctx.font = "600 104px Georgia, 'Times New Roman', serif";
   ctx.fillText("HISTORY STORIES", cx, 170);
 
-  ctx.fillStyle = "#c084fc";
+  ctx.fillStyle = "#6d28d9";
   ctx.font = "italic 52px Georgia, 'Times New Roman', serif";
-  ctx.fillText("A Night Gallery", cx, 290);
+  ctx.fillText("A Walking Gallery", cx, 290);
 
-  ctx.strokeStyle = "#3a3347";
+  ctx.strokeStyle = "#d8d5cd";
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(cx - 220, 370);
   ctx.lineTo(cx + 220, 370);
   ctx.stroke();
 
-  ctx.fillStyle = "#c2c2d4";
+  ctx.fillStyle = "#4a4742";
   ctx.font = "44px Georgia, 'Times New Roman', serif";
   ctx.fillText("↑ ↓  walk      ← →  turn", cx, 480);
-  ctx.fillText("Enter  —  view a painting", cx, 590);
-  ctx.fillText("Esc  —  step back", cx, 700);
+  ctx.fillText("Enter  ·  view a painting", cx, 590);
+  ctx.fillText("Esc  ·  step back", cx, 700);
 
-  ctx.fillStyle = "#7a7a92";
+  ctx.fillStyle = "#8a867e";
   ctx.font = "italic 34px Georgia, 'Times New Roman', serif";
   ctx.fillText("Rome · Ramayana · Mahabharata", cx, 800);
 
@@ -89,4 +100,115 @@ export function makePlacardTexture(): {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
   return { texture, aspect: canvas.width / canvas.height };
+}
+
+// The Broad's "veil" ceiling: a honeycomb of deep cells, skylight glowing
+// through each one. Drawn once as an emissive map (SPEC 2.3).
+export function makeVeilTexture(): THREE.CanvasTexture {
+  const size = 2048;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  // Cell walls between the glowing openings.
+  ctx.fillStyle = "#d8d7d2";
+  ctx.fillRect(0, 0, size, size);
+
+  // Pointy-top hex grid, ~12 cells across.
+  const cols = 12;
+  const r = size / (cols * Math.sqrt(3)) * 1.04; // circumradius
+  const w = Math.sqrt(3) * r;
+  const h = 1.5 * r;
+  const inset = 0.8; // opening size relative to the cell
+
+  const hexPath = (cx: number, cy: number, rad: number) => {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + (i * Math.PI) / 3;
+      const x = cx + rad * Math.cos(a);
+      const y = cy + rad * Math.sin(a);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  };
+
+  for (let row = -1; row * h < size + h; row++) {
+    const offset = row % 2 ? w / 2 : 0;
+    for (let col = -1; col * w < size + w; col++) {
+      const cx = col * w + offset;
+      const cy = row * h;
+      // Shaded cell throat fakes the veil's depth.
+      hexPath(cx, cy, r * 0.94);
+      const lip = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
+      lip.addColorStop(0, "#c4c3bd");
+      lip.addColorStop(1, "#e2e1dc");
+      ctx.fillStyle = lip;
+      ctx.fill();
+      // Skylight opening.
+      hexPath(cx, cy, r * inset);
+      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * inset);
+      glow.addColorStop(0, "#ffffff");
+      glow.addColorStop(0.75, "#fdfdfa");
+      glow.addColorStop(1, "#eceae3");
+      ctx.fillStyle = glow;
+      ctx.fill();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+// Light polished concrete with faint panel seams (SPEC 2.1).
+export function makeFloorTexture(): THREE.CanvasTexture {
+  const size = 1024;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#c9c9c5";
+  ctx.fillRect(0, 0, size, size);
+
+  // Subtle mottling so the floor doesn't read as flat fill.
+  for (let i = 0; i < 900; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const rad = 14 + Math.random() * 50;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    const tone = Math.random() > 0.5 ? "#cfcfcb" : "#c2c2be";
+    g.addColorStop(0, tone);
+    g.addColorStop(1, "rgba(201, 201, 197, 0)");
+    ctx.fillStyle = g;
+    ctx.globalAlpha = 0.25;
+    ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  }
+  ctx.globalAlpha = 1;
+
+  // Panel seams: texture spans half the room (12 units), seams every 4 units.
+  ctx.strokeStyle = "#b8b8b4";
+  ctx.lineWidth = 2;
+  for (let i = 0; i <= 3; i++) {
+    const p = (i * size) / 3;
+    ctx.beginPath();
+    ctx.moveTo(p, 0);
+    ctx.lineTo(p, size);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, p);
+    ctx.lineTo(size, p);
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2, 2);
+  texture.anisotropy = 8;
+  return texture;
 }
