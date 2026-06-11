@@ -47,21 +47,21 @@ function setHud(attrs: Record<string, string>) {
 const HINT_KEY = "museum.hintSeen.v1";
 
 function HintOverlay({ coarse }: { coarse: boolean }) {
-  const [show, setShow] = useState(false);
+  // Client-only component: decide synchronously so the focus prompt never
+  // sees a false hintVisible window between mount and a state flip.
+  const [show, setShow] = useState(() => {
+    try {
+      return !localStorage.getItem(HINT_KEY);
+    } catch {
+      return true;
+    }
+  });
 
   const dismiss = useCallback(() => {
     setShow(false);
     try {
       localStorage.setItem(HINT_KEY, "1");
     } catch {}
-  }, []);
-
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem(HINT_KEY)) setShow(true);
-    } catch {
-      setShow(true);
-    }
   }, []);
 
   useEffect(() => {
@@ -487,6 +487,13 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
   useEffect(() => {
     setGlOk(webglAvailable());
     setCoarse(window.matchMedia("(pointer: coarse)").matches);
+    // Known before any frame renders: if the hint is going to show, the
+    // prompt must never flash over it during the load reveal.
+    try {
+      focusStore.hintVisible = !localStorage.getItem(HINT_KEY);
+    } catch {
+      focusStore.hintVisible = true;
+    }
   }, []);
 
   const openStory = useCallback(

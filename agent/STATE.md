@@ -2,8 +2,8 @@
 
 - phase: build
 - sprint: 10
-- attempts: 0
-- last_verdict: PASS (sprint 9)
+- attempts: 1
+- last_verdict: FAIL (sprint 10 attempt 1: prompt flashes over hint during load reveal)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.

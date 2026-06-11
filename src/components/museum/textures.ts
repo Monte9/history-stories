@@ -201,8 +201,8 @@ export function makeFloorTexture(): THREE.CanvasTexture {
     size / 2,
     size * 0.72,
   );
-  gloss.addColorStop(0, "rgba(255, 255, 255, 0.26)");
-  gloss.addColorStop(0.55, "rgba(255, 255, 255, 0.1)");
+  gloss.addColorStop(0, "rgba(255, 255, 255, 0.62)");
+  gloss.addColorStop(0.55, "rgba(255, 255, 255, 0.2)");
   gloss.addColorStop(1, "rgba(255, 255, 255, 0)");
   ctx.fillStyle = gloss;
   ctx.fillRect(0, 0, size, size);
