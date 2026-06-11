@@ -50,7 +50,18 @@ function restoreCamera(): { x: number; z: number; headingDeg: number } | null {
   }
 }
 
-type Action = "fwd" | "back" | "left" | "right";
+export type Action = "fwd" | "back" | "left" | "right";
+
+// On-screen touch controls press these; merged with keyboard input each frame.
+const externalKeys = new Set<Action>();
+
+export function pressAction(action: Action) {
+  externalKeys.add(action);
+}
+
+export function releaseAction(action: Action) {
+  externalKeys.delete(action);
+}
 
 const KEYMAP: Record<string, Action> = {
   ArrowUp: "fwd",
@@ -83,15 +94,17 @@ export default function WalkControls() {
     if (hud) {
       hud.setAttribute("data-x", pos.current.x.toFixed(2));
       hud.setAttribute("data-z", pos.current.z.toFixed(2));
+      const norm = ((heading.current % 360) + 360) % 360;
       hud.setAttribute(
         "data-heading",
-        (((heading.current % 360) + 360) % 360).toFixed(1),
+        ((Math.round(norm * 10) / 10) % 360).toFixed(1),
       );
     }
   }, [camera]);
 
   useEffect(() => {
     savesLocked = false;
+    externalKeys.clear();
     const face = new URLSearchParams(window.location.search).get(
       "face",
     ) as WallId | null;
@@ -132,11 +145,12 @@ export default function WalkControls() {
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.1);
-    const k = keys.current;
+    const active = (a: Action) =>
+      keys.current.has(a) || externalKeys.has(a);
     const targetWalk =
-      (k.has("fwd") ? WALK_SPEED : 0) + (k.has("back") ? -WALK_SPEED : 0);
+      (active("fwd") ? WALK_SPEED : 0) + (active("back") ? -WALK_SPEED : 0);
     const targetTurn =
-      (k.has("right") ? TURN_SPEED : 0) + (k.has("left") ? -TURN_SPEED : 0);
+      (active("right") ? TURN_SPEED : 0) + (active("left") ? -TURN_SPEED : 0);
     const a = Math.min(1, dt / SMOOTH);
     vel.current.walk += (targetWalk - vel.current.walk) * a;
     vel.current.turn += (targetTurn - vel.current.turn) * a;

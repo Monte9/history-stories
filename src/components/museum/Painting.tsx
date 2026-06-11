@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { makeTextTexture } from "./textures";
+import { focusStore } from "./focusStore";
 import type { HungPainting } from "./layout";
 
 const SPOT_INTENSITY = 26;
@@ -73,7 +74,22 @@ export default function Painting({
   );
 
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
+    <group
+      position={position}
+      rotation={[0, rotationY, 0]}
+      onClick={(e) => {
+        e.stopPropagation();
+        // First tap focuses; tapping the focused painting opens it.
+        const focused = document
+          .getElementById("museum-hud")
+          ?.getAttribute("data-focused");
+        if (focused === story.slug) {
+          focusStore.openStory?.(story.slug);
+        } else {
+          focusStore.tapSlug = story.slug;
+        }
+      }}
+    >
       {/* frame */}
       <mesh position={[0, 0, -0.045]}>
         <boxGeometry args={[width + 0.28, height + 0.28, 0.1]} />

@@ -12,7 +12,14 @@ import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import Painting from "./Painting";
-import WalkControls, { lockSaves, saveCamera } from "./WalkControls";
+import WalkControls, {
+  lockSaves,
+  pressAction,
+  releaseAction,
+  saveCamera,
+  type Action,
+} from "./WalkControls";
+import { focusStore } from "./focusStore";
 import { makePlacardTexture, makeTextTexture } from "./textures";
 import {
   buildLayout,
@@ -218,10 +225,23 @@ function FocusManager({
 }) {
   const camera = useThree((s) => s.camera);
   const current = useRef("");
+  const tapAnchor = useRef<{ x: number; z: number } | null>(null);
 
   useFrame(() => {
     const cx = camera.position.x;
     const cz = camera.position.z;
+    // Walking more than half a unit clears a tap-focus override.
+    if (focusStore.tapSlug) {
+      if (!tapAnchor.current) tapAnchor.current = { x: cx, z: cz };
+      else if (
+        Math.hypot(cx - tapAnchor.current.x, cz - tapAnchor.current.z) > 0.5
+      ) {
+        focusStore.tapSlug = "";
+        tapAnchor.current = null;
+      }
+    } else {
+      tapAnchor.current = null;
+    }
     const heading = -THREE.MathUtils.radToDeg(camera.rotation.y);
     let best = "";
     let bestTitle = "";
@@ -240,6 +260,13 @@ function FocusManager({
         bestAngle = diff;
         best = h.story.slug;
         bestTitle = h.story.title;
+      }
+    }
+    if (focusStore.tapSlug) {
+      const tapped = hungs.find((h) => h.story.slug === focusStore.tapSlug);
+      if (tapped) {
+        best = tapped.story.slug;
+        bestTitle = tapped.story.title;
       }
     }
     if (best === current.current) return;
@@ -341,9 +368,89 @@ function Paintings({
   );
 }
 
+function TouchControls() {
+  const bind = (action: Action) => ({
+    onPointerDown: (e: React.PointerEvent) => {
+      e.preventDefault();
+      try {
+        (e.target as Element).setPointerCapture?.(e.pointerId);
+      } catch {
+        // synthetic/untracked pointers can't be captured; press still counts
+      }
+      pressAction(action);
+    },
+    onPointerUp: () => releaseAction(action),
+    onPointerLeave: () => releaseAction(action),
+    onPointerCancel: () => releaseAction(action),
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+  });
+  const cls =
+    "flex h-12 w-12 touch-none items-center justify-center rounded-full border border-[var(--color-border)] bg-black/55 text-lg text-[var(--color-text)] backdrop-blur select-none active:border-[var(--color-accent-dim)] active:bg-black/75";
+  return (
+    <div
+      id="museum-touch-controls"
+      className="absolute bottom-24 left-1/2 z-10 flex -translate-x-1/2 gap-3 sm:hidden"
+    >
+      <button aria-label="Turn left" className={cls} {...bind("left")}>
+        ⟲
+      </button>
+      <button aria-label="Walk forward" className={cls} {...bind("fwd")}>
+        ▲
+      </button>
+      <button aria-label="Walk back" className={cls} {...bind("back")}>
+        ▼
+      </button>
+      <button aria-label="Turn right" className={cls} {...bind("right")}>
+        ⟳
+      </button>
+    </div>
+  );
+}
+
+function webglAvailable(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(
+      canvas.getContext("webgl2") || canvas.getContext("webgl")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
   const [loaded, setLoaded] = useState(false);
+  // null = not probed yet (SSR-safe); the probe runs before mounting the canvas.
+  const [glOk, setGlOk] = useState<boolean | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    setGlOk(webglAvailable());
+  }, []);
+
+  const openStory = useCallback(
+    (slug: string) => {
+      // Persist the camera synchronously so Escape returns here exactly.
+      const hud = document.getElementById("museum-hud");
+      const x = parseFloat(hud?.getAttribute("data-x") || "");
+      const z = parseFloat(hud?.getAttribute("data-z") || "");
+      const heading = parseFloat(hud?.getAttribute("data-heading") || "");
+      if (!Number.isNaN(x) && !Number.isNaN(z) && !Number.isNaN(heading)) {
+        saveCamera(x, z, heading);
+        lockSaves();
+      }
+      router.push(`/${slug}`);
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    focusStore.openStory = openStory;
+    focusStore.tapSlug = "";
+    return () => {
+      focusStore.openStory = null;
+    };
+  }, [openStory]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -353,21 +460,43 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         ?.getAttribute("data-focused");
       if (slug) {
         e.preventDefault();
-        // Persist the camera synchronously so Escape returns here exactly.
-        const hud = document.getElementById("museum-hud");
-        const x = parseFloat(hud?.getAttribute("data-x") || "");
-        const z = parseFloat(hud?.getAttribute("data-z") || "");
-        const heading = parseFloat(hud?.getAttribute("data-heading") || "");
-        if (!Number.isNaN(x) && !Number.isNaN(z) && !Number.isNaN(heading)) {
-          saveCamera(x, z, heading);
-          lockSaves();
-        }
-        router.push(`/${slug}`);
+        openStory(slug);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [router]);
+  }, [openStory]);
+
+  if (glOk === false) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center p-6">
+        <div className="max-w-md text-center">
+          <p className="mb-3 text-lg text-[var(--color-text)]">
+            This room needs WebGL, which your browser has turned off.
+          </p>
+          <p className="mb-6 text-sm text-[var(--color-text-muted)]">
+            The collection is still open — browse every story in the flat
+            gallery instead.
+          </p>
+          <a
+            href="/gallery"
+            className="inline-block rounded-full border border-[var(--color-accent-dim)] px-5 py-2 text-sm text-[var(--color-accent)] transition-colors hover:bg-[var(--color-accent-glow)]"
+          >
+            Gallery view
+          </a>
+        </div>
+      </div>
+    );
+  }
+  if (glOk === null) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center">
+        <p className="text-sm tracking-[0.25em] text-[var(--color-text-muted)] uppercase">
+          Entering the museum…
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0">
@@ -406,11 +535,18 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         </Suspense>
       </Canvas>
       {loaded && <HintOverlay />}
+      {loaded && <TouchControls />}
       <div
         id="museum-prompt"
         style={{ display: "none" }}
         aria-live="polite"
-        className="absolute bottom-8 left-1/2 z-20 max-w-[92vw] -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--color-accent-dim)] bg-black/70 px-5 py-2.5 backdrop-blur"
+        onClick={() => {
+          const slug = document
+            .getElementById("museum-hud")
+            ?.getAttribute("data-focused");
+          if (slug) focusStore.openStory?.(slug);
+        }}
+        className="absolute bottom-8 left-1/2 z-20 max-w-[92vw] -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border border-[var(--color-accent-dim)] bg-black/70 px-5 py-2.5 backdrop-blur"
       >
         <span
           id="museum-prompt-title"
