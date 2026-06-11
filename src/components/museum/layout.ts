@@ -16,7 +16,9 @@ export const ROOM = {
   usableWall: 20,
 };
 
-export const DEFAULT_SPAWN = { x: -9.5, z: 0, headingDeg: 90 };
+// Spawn faces the Rome wall from ~12 units: large canvases fill the view
+// instead of a far-off strip (taste audit finding 5).
+export const DEFAULT_SPAWN = { x: -5, z: 0, headingDeg: 0 };
 
 // Heading: 0 = facing Wall 1 (north, -z), increases clockwise (ArrowRight).
 export const FACE_HEADINGS: Record<WallId, number> = {
@@ -76,14 +78,15 @@ export interface HungPainting {
   badge?: string; // small tag on the frame, e.g. "NEW"
 }
 
-// Wall 4 layout: entrance placard on the left half, New Acquisitions row right.
+// Wall 4 layout: placard plus New Acquisitions row, grouped and centered
+// (taste audit finding 9: the wall was lopsided with a blank middle).
 export const CURATOR = {
-  placardT: -5.2,
+  placardT: -4.95,
   placardW: 4.6,
   placardY: 2.3,
-  acquisitionTs: [3.0, 5.9, 8.8],
+  acquisitionTs: [-0.55, 2.75, 6.05],
   acquisitionW: 2.4,
-  labelT: 5.9,
+  labelT: 2.75,
 };
 
 // The 3 most recent stories by frontmatter date; slug (timestamped) breaks ties.
@@ -102,6 +105,21 @@ const ASPECT = 1.875 / 3.0; // 16:10 cover aspect
 function spread(n: number): number[] {
   const s = ROOM.usableWall / n;
   return Array.from({ length: n }, (_, i) => -ROOM.usableWall / 2 + s * (i + 0.5));
+}
+
+// Hang n paintings as one centered group with a fixed gap, so sparse walls
+// read as generous hanging instead of scattered frames (taste audit 5, 9).
+const HANG_GAP = 0.8;
+const HANG_MAX_W = 3.8;
+
+function hangGroup(n: number): { ts: number[]; width: number } {
+  const width = Math.min(
+    HANG_MAX_W,
+    (ROOM.usableWall - (n - 1) * HANG_GAP) / n,
+  );
+  const step = width + HANG_GAP;
+  const start = -((n - 1) * step) / 2;
+  return { ts: Array.from({ length: n }, (_, i) => start + i * step), width };
 }
 
 export function layoutWall(stories: MuseumStory[], wall: WallId): HungPainting[] {
@@ -128,8 +146,8 @@ export function layoutWall(stories: MuseumStory[], wall: WallId): HungPainting[]
   });
 
   if (hung.length <= 6) {
-    const ts = spread(hung.length);
-    return hung.map((s, i) => make(s, ts[i], 2.0, 3.0));
+    const { ts, width } = hangGroup(hung.length);
+    return hung.map((s, i) => make(s, ts[i], 2.0, width));
   }
   if (hung.length <= 8) {
     const width = Math.max(2.2, (ROOM.usableWall - (hung.length - 1) * 0.5) / hung.length);

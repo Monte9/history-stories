@@ -124,9 +124,15 @@ Acceptance criteria:
 - A post-fix re-audit is recorded in `agent/evals/` with no remaining "blocks shippable" finding
 - No regressions: keyboard journey, wheel/drag controls, gaze focus, HUD contract, `pnpm build` green
 
-Converted ACs (filled in by the generator from the audit, before building):
+Converted ACs (from agent/evals/20260611-085051-taste-audit.md findings 1-5, all "blocks shippable"; recorded before building):
 
-- (to be appended at sprint start)
+- Walls gallery white (audit 1): in fresh 1280x900 shots at all four `?face=` walls, a 5x5 mean sample of bare wall reads RGB 225-248 per channel; painting canvases unclipped and placard cards sample ≤ 250
+- No spawn toast pile-up (audit 2): fresh profile at 1280x900 with a painting focused at spawn, `#museum-hint` and `#museum-prompt` bounding rects are disjoint (or the prompt stays hidden until the hint dismisses, then appears for the still-focused painting)
+- Legible nav pill (audit 3): the "Gallery view" link's computed text color vs its own pill background gives contrast >= 4.5:1, and 1280 + 390 screenshots show it legible over both ceiling and wall
+- Markdown emphasis renders (audit 4): a DOM scan of every story page's article text finds zero `*...*` pairs; the Karna story renders kavacha/kundala inside `<em>` elements
+- Spawn composition (audit 5): at default spawn 1280x900, the facing wall's center painting measures >= 100px tall in the screenshot; collision, gaze focus, and Enter/Escape regressions still pass
+
+Also being fixed this sprint (audit nice-to-haves 6-12, opportunistic, must not regress the ACs above): floor sheen gradient, crisp placard ink (unlit, larger type), brighter veil cell glow vs webbing, regrouped sparse walls and centered curator wall, no Esc chip on coarse pointers, real dark-to-light load fade, placard frame/subtitle toned to match.
 
 ## Sprint 11: Second taste pass — pending (conditional)
 

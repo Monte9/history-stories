@@ -75,7 +75,7 @@ export function makePlacardTexture(): {
   ctx.font = "600 104px Georgia, 'Times New Roman', serif";
   ctx.fillText("HISTORY STORIES", cx, 170);
 
-  ctx.fillStyle = "#6d28d9";
+  ctx.fillStyle = "#4a4742";
   ctx.font = "italic 52px Georgia, 'Times New Roman', serif";
   ctx.fillText("A Walking Gallery", cx, 290);
 
@@ -113,7 +113,7 @@ export function makeVeilTexture(): THREE.CanvasTexture {
   const ctx = canvas.getContext("2d")!;
 
   // Cell walls between the glowing openings.
-  ctx.fillStyle = "#d8d7d2";
+  ctx.fillStyle = "#d2d1cc";
   ctx.fillRect(0, 0, size, size);
 
   // Pointy-top hex grid, ~12 cells across.
@@ -143,16 +143,17 @@ export function makeVeilTexture(): THREE.CanvasTexture {
       // Shaded cell throat fakes the veil's depth.
       hexPath(cx, cy, r * 0.94);
       const lip = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
-      lip.addColorStop(0, "#c4c3bd");
-      lip.addColorStop(1, "#e2e1dc");
+      lip.addColorStop(0, "#bdbcb6");
+      lip.addColorStop(1, "#dbdad5");
       ctx.fillStyle = lip;
       ctx.fill();
-      // Skylight opening.
+      // Skylight opening: clearly brighter than the webbing so the cells
+      // read as the light source (taste audit finding 8).
       hexPath(cx, cy, r * inset);
       const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * inset);
       glow.addColorStop(0, "#ffffff");
-      glow.addColorStop(0.75, "#fdfdfa");
-      glow.addColorStop(1, "#eceae3");
+      glow.addColorStop(0.8, "#fefefb");
+      glow.addColorStop(1, "#f3f1ea");
       ctx.fillStyle = glow;
       ctx.fill();
     }
@@ -189,6 +190,22 @@ export function makeFloorTexture(): THREE.CanvasTexture {
     ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
   }
   ctx.globalAlpha = 1;
+
+  // Soft gloss pooling toward the room center, echoing the veil's glow on
+  // polished concrete (taste audit finding 6).
+  const gloss = ctx.createRadialGradient(
+    size / 2,
+    size / 2,
+    0,
+    size / 2,
+    size / 2,
+    size * 0.72,
+  );
+  gloss.addColorStop(0, "rgba(255, 255, 255, 0.26)");
+  gloss.addColorStop(0.55, "rgba(255, 255, 255, 0.1)");
+  gloss.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = gloss;
+  ctx.fillRect(0, 0, size, size);
 
   // Panel seams: texture spans half the room (12 units), seams every 4 units.
   ctx.strokeStyle = "#b8b8b4";

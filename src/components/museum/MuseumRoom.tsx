@@ -65,6 +65,13 @@ function HintOverlay({ coarse }: { coarse: boolean }) {
   }, []);
 
   useEffect(() => {
+    focusStore.hintVisible = show;
+    return () => {
+      focusStore.hintVisible = false;
+    };
+  }, [show]);
+
+  useEffect(() => {
     if (!show) return;
     const onKey = () => dismiss();
     const onWheel = () => dismiss();
@@ -141,7 +148,9 @@ function HintOverlay({ coarse }: { coarse: boolean }) {
 
 function RoomShell() {
   const { half, height } = ROOM;
-  const wallMat = { color: "#f2f1ed", roughness: 0.95, metalness: 0 };
+  // Unlit, untone-mapped gallery white: walls must be the brightest large
+  // surface, like the reference photo (taste audit finding 1).
+  const wallMat = { color: "#f2f1ed", toneMapped: false };
   const floor = useMemo(() => makeFloorTexture(), []);
   const veil = useMemo(() => makeVeilTexture(), []);
   return (
@@ -149,29 +158,29 @@ function RoomShell() {
       {/* floor: light polished concrete */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[ROOM.size, ROOM.size]} />
-        <meshStandardMaterial map={floor} roughness={0.4} metalness={0.08} />
+        <meshStandardMaterial map={floor} roughness={0.3} metalness={0.08} />
       </mesh>
-      {/* ceiling: the veil, emissive so it reads as the skylight */}
+      {/* ceiling: the veil, unlit so it reads as the skylight */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, height, 0]}>
         <planeGeometry args={[ROOM.size, ROOM.size]} />
-        <meshBasicMaterial map={veil} />
+        <meshBasicMaterial map={veil} toneMapped={false} />
       </mesh>
       {/* walls: north, east, south, west */}
       <mesh position={[0, height / 2, -half]}>
         <planeGeometry args={[ROOM.size, height]} />
-        <meshStandardMaterial {...wallMat} />
+        <meshBasicMaterial {...wallMat} />
       </mesh>
       <mesh position={[half, height / 2, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <planeGeometry args={[ROOM.size, height]} />
-        <meshStandardMaterial {...wallMat} />
+        <meshBasicMaterial {...wallMat} />
       </mesh>
       <mesh position={[0, height / 2, half]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[ROOM.size, height]} />
-        <meshStandardMaterial {...wallMat} />
+        <meshBasicMaterial {...wallMat} />
       </mesh>
       <mesh position={[-half, height / 2, 0]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[ROOM.size, height]} />
-        <meshStandardMaterial {...wallMat} />
+        <meshBasicMaterial {...wallMat} />
       </mesh>
     </group>
   );
@@ -195,7 +204,7 @@ function WallLabel({ wall, t = 0 }: { wall: WallId; t?: number }) {
     <group position={def.point(t, 4.35)} rotation={[0, def.rotationY, 0]}>
       <mesh>
         <planeGeometry args={[w, h]} />
-        <meshBasicMaterial map={label.texture} transparent />
+        <meshBasicMaterial map={label.texture} transparent toneMapped={false} />
       </mesh>
     </group>
   );
@@ -212,12 +221,12 @@ function CuratorPlacard() {
       rotation={[0, def.rotationY, 0]}
     >
       <mesh position={[0, 0, -0.025]}>
-        <boxGeometry args={[w + 0.14, h + 0.14, 0.06]} />
+        <boxGeometry args={[w + 0.1, h + 0.1, 0.06]} />
         <meshStandardMaterial color="#26221e" metalness={0.1} roughness={0.6} />
       </mesh>
       <mesh position={[0, 0, 0.012]}>
         <planeGeometry args={[w, h]} />
-        <meshStandardMaterial map={plate.texture} roughness={0.8} metalness={0} />
+        <meshBasicMaterial map={plate.texture} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -290,30 +299,53 @@ function FocusManager({
         bestTitle = tapped.story.title;
       }
     }
+    // Visibility runs every frame: the prompt stays out of the hint's way
+    // and appears as soon as the hint dismisses, without a focus change.
+    const prompt = document.getElementById("museum-prompt");
+    if (prompt) {
+      prompt.style.display =
+        best && !focusStore.hintVisible ? "flex" : "none";
+    }
     if (best === current.current) return;
     registry.get(current.current)?.(false);
     registry.get(best)?.(true);
     current.current = best;
     document.getElementById("museum-hud")?.setAttribute("data-focused", best);
-    const prompt = document.getElementById("museum-prompt");
     const title = document.getElementById("museum-prompt-title");
-    if (prompt && title) {
-      if (best) {
-        title.textContent = bestTitle;
-        const tradition = hungs.find((h) => h.story.slug === best)?.story
-          .tradition;
-        prompt.style.borderColor =
-          (tradition && WALL_TINTS[tradition]) || "";
-        prompt.style.display = "flex";
-      } else {
-        prompt.style.display = "none";
-      }
+    if (prompt && title && best) {
+      title.textContent = bestTitle;
+      const tradition = hungs.find((h) => h.story.slug === best)?.story
+        .tradition;
+      prompt.style.borderColor = (tradition && WALL_TINTS[tradition]) || "";
     }
   });
   return null;
 }
 
 type HungPaintingList = ReturnType<typeof buildLayout>["walls"][WallId];
+
+// Fires onReady only after the textured room has actually been drawn a few
+// times, so the loading plate fades into a finished frame instead of
+// hard-cutting from black (taste audit finding 11).
+function RevealAfterFrames({
+  onReady,
+  frames = 6,
+}: {
+  onReady: () => void;
+  frames?: number;
+}) {
+  const count = useRef(0);
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    count.current += 1;
+    if (count.current >= frames) {
+      done.current = true;
+      onReady();
+    }
+  });
+  return null;
+}
 
 function Paintings({
   stories,
@@ -369,8 +401,7 @@ function Paintings({
       "data-wall-curator": layout.slugsByWall.curator,
       "data-loaded": "true",
     });
-    onLoaded();
-  }, [layout, onLoaded]);
+  }, [layout]);
 
   return (
     <group>
@@ -391,6 +422,7 @@ function Paintings({
       )}
       <CuratorPlacard />
       <FocusManager hungs={hungs} registry={registry} />
+      <RevealAfterFrames onReady={onLoaded} />
     </group>
   );
 }

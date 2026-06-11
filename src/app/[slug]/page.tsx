@@ -1,8 +1,25 @@
+import type { ReactNode } from "react";
 import { getAllSlugs, getStoryBySlug } from "@/lib/stories";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CoverCarousel from "@/components/CoverCarousel";
 import EscapeReturn from "@/components/EscapeReturn";
+
+// Minimal inline markdown for story prose: **strong** and *em* only.
+function renderInline(text: string): ReactNode[] {
+  return text
+    .split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+    .filter(Boolean)
+    .map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+        return <strong key={i}>{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+        return <em key={i}>{part.slice(1, -1)}</em>;
+      }
+      return part;
+    });
+}
 
 const traditionColors: Record<string, string> = {
   roman: "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -52,7 +69,7 @@ export default async function StoryPage({
               className="text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-accent)]"
             >
               ← Back to the museum{" "}
-              <span className="rounded border border-[var(--color-border)] px-1.5 py-0.5 text-xs">
+              <span className="rounded border border-[var(--color-border)] px-1.5 py-0.5 text-xs pointer-coarse:hidden">
                 Esc
               </span>
             </Link>
@@ -92,7 +109,7 @@ export default async function StoryPage({
                     key={i}
                     className="border-l-2 border-[var(--color-accent-dim)] pl-4 text-[var(--color-text-muted)] italic"
                   >
-                    {p.replace(/^\*+|\*+$/g, "")}
+                    {renderInline(p.replace(/^\*+|\*+$/g, ""))}
                   </p>
                 );
               }
@@ -101,7 +118,7 @@ export default async function StoryPage({
                   key={i}
                   className="text-base leading-relaxed text-[var(--color-text)] sm:text-lg"
                 >
-                  {p}
+                  {renderInline(p)}
                 </p>
               );
             })}

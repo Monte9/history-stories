@@ -5,6 +5,9 @@ export const focusStore = {
   // Tap focus override: a tapped painting stays focused regardless of
   // proximity until movement or another tap clears it.
   tapSlug: "",
+  // While the first-visit hint shows, the focus prompt stays hidden so the
+  // two never stack at spawn.
+  hintVisible: false,
   // Registered by the room shell (owns the router and camera save).
   openStory: null as ((slug: string) => void) | null,
 };

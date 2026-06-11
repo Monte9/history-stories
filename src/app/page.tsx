@@ -24,7 +24,7 @@ export default function Home() {
         </h1>
         <Link
           href="/gallery"
-          className="pointer-events-auto rounded-full border border-[var(--color-border)] bg-black/40 px-3.5 py-1.5 text-xs text-[var(--color-text-muted)] backdrop-blur transition-colors hover:border-[var(--color-accent-dim)] hover:text-[var(--color-accent)] sm:text-sm"
+          className="pointer-events-auto rounded-full border border-[var(--color-border)] bg-black/70 px-3.5 py-1.5 text-xs text-[var(--color-text)] backdrop-blur transition-colors hover:border-[var(--color-accent-dim)] hover:text-[var(--color-accent)] sm:text-sm"
         >
           Gallery view
         </Link>

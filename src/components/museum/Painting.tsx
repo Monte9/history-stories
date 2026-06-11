@@ -40,15 +40,15 @@ export default function Painting({
     () =>
       makeTextTexture(story.title, {
         color: "#2b2b2b",
-        fontPx: 48,
-        weight: "400",
+        fontPx: 60,
+        weight: "500",
         letterSpacing: 0.04,
         background: "#fbfaf7",
         border: "#d8d5cd",
       }),
     [story.title],
   );
-  const placardH = 0.2;
+  const placardH = 0.24;
   const placardW = Math.min(width * 0.95, placardH * placard.aspect);
 
   const badge = useMemo(
@@ -91,7 +91,7 @@ export default function Painting({
       {/* focus outline: tradition tint, visible against white walls */}
       <mesh ref={outlineRef} visible={false} position={[0, 0, -0.05]}>
         <planeGeometry args={[frameW + 0.16, frameH + 0.16]} />
-        <meshBasicMaterial color={WALL_TINTS[story.tradition]} />
+        <meshBasicMaterial color={WALL_TINTS[story.tradition]} toneMapped={false} />
       </mesh>
       {/* frame */}
       <mesh position={[0, 0, -0.025]}>
@@ -109,9 +109,9 @@ export default function Painting({
         />
       </mesh>
       {/* placard */}
-      <mesh position={[0, -(height / 2 + 0.32), 0.012]}>
+      <mesh position={[0, -(height / 2 + 0.34), 0.012]}>
         <planeGeometry args={[placardW, placardH]} />
-        <meshBasicMaterial map={placard.texture} />
+        <meshBasicMaterial map={placard.texture} toneMapped={false} />
       </mesh>
       {/* badge tag */}
       {badge && (
@@ -120,7 +120,7 @@ export default function Painting({
           rotation={[0, 0, 0.06]}
         >
           <planeGeometry args={[0.22 * badge.aspect, 0.22]} />
-          <meshBasicMaterial map={badge.texture} />
+          <meshBasicMaterial map={badge.texture} toneMapped={false} />
         </mesh>
       )}
     </group>

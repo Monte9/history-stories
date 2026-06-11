@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { DEFAULT_SPAWN, FACE_HEADINGS, ROOM, type WallId } from "./layout";
@@ -116,7 +116,9 @@ export default function WalkControls() {
     }
   }, [camera]);
 
-  useEffect(() => {
+  // Layout effect: the restored camera must be in place before the first
+  // rendered frame, or FocusManager briefly focuses along the default view.
+  useLayoutEffect(() => {
     savesLocked = false;
     externalKeys.clear();
     const face = new URLSearchParams(window.location.search).get(
