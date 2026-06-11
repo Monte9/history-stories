@@ -88,7 +88,7 @@ Acceptance criteria:
 - Regression: full keyboard journey green at 1280px (spawn → walk → focus → Enter → carousel → Escape with position restored within 0.1); all `#museum-hud` attributes and `?face=` semantics unchanged; zero console errors; `pnpm build` green
 - At 390px: the bright room renders, the touch cluster and hint overlay remain legible over the bright canvas, no horizontal overflow
 
-## Sprint 8: Trackpad movement and gaze focus — pending
+## Sprint 8: Trackpad movement and gaze focus — done (2026-06-11, PASS attempt 2)
 
 Monte's feedback items 2 and 3. SPEC 3.3 and 4.1: wheel walk/turn with preventDefault, pointer-drag look with clamped pitch (`data-pitch` HUD attribute), drag-vs-tap threshold, and the gaze focus rule (view-centered, no distance gate) replacing the proximity rule. Update hint overlay and curator placard legend copy.
 
