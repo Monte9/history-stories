@@ -28,6 +28,7 @@ import {
   subscribeCamMode,
 } from "./playerStore";
 import { focusStore } from "./focusStore";
+import PresenceManager from "./presence/PresenceManager";
 import {
   makeFloorTexture,
   makePlacardTexture,
@@ -604,6 +605,8 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         data-z=""
         data-heading=""
         data-pitch=""
+        data-net=""
+        data-peers="0"
         data-wall-roman=""
         data-wall-ramayana=""
         data-wall-mahabharata=""
@@ -632,6 +635,7 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
           <Paintings stories={stories} onLoaded={() => setLoaded(true)} />
         </Suspense>
       </Canvas>
+      <PresenceManager loaded={loaded} />
       {loaded && <HintOverlay coarse={coarse} />}
       {loaded && <TouchControls />}
       {loaded && (
