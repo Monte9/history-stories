@@ -26,7 +26,7 @@ Acceptance criteria:
 - Collision: holding forward into any wall converges with the camera ≥ 1.4 units from it and `data-x`/`data-z` never exceed the room bounds; same in a corner approach
 - First visit shows the controls hint overlay (arrows, Enter, Esc); it dismisses on first keypress or its close button and does not reappear after reload in the same browser profile
 
-## Sprint 3: Focus and Enter — pending
+## Sprint 3: Focus and Enter — done (2026-06-11, PASS)
 
 Proximity focus (distance < 3.0, within ±35° of heading), frame/spotlight highlight, DOM prompt, Enter opens the story (SPEC 4).
 
