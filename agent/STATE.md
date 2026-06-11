@@ -1,9 +1,9 @@
 # Harness State
 
 - phase: build
-- sprint: 1
+- sprint: 2
 - attempts: 0
-- last_verdict: none
+- last_verdict: PASS (sprint 1)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.
@@ -13,3 +13,4 @@ Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.
 | date | sprint | phase | result |
 |------|--------|-------|--------|
 | 2026-06-11 | - | scaffold | harness created |
+| 2026-06-11 | 1 | build | PASS first attempt, landed on main |
