@@ -63,6 +63,27 @@ export interface HungPainting {
   rotationY: number;
   width: number;
   height: number;
+  badge?: string; // small tag on the frame, e.g. "NEW"
+}
+
+// Wall 4 layout: entrance placard on the left half, New Acquisitions row right.
+export const CURATOR = {
+  placardT: -5.2,
+  placardW: 4.6,
+  placardY: 2.3,
+  acquisitionTs: [3.0, 5.9, 8.8],
+  acquisitionW: 2.4,
+  labelT: 5.9,
+};
+
+// The 3 most recent stories by frontmatter date; slug (timestamped) breaks ties.
+export function pickAcquisitions(stories: MuseumStory[]): MuseumStory[] {
+  return [...stories]
+    .filter((s) => s.coverThumb)
+    .sort(
+      (a, b) => b.date.localeCompare(a.date) || b.slug.localeCompare(a.slug),
+    )
+    .slice(0, 3);
 }
 
 const ASPECT = 1.875 / 3.0; // 16:10 cover aspect
@@ -130,11 +151,19 @@ export function buildLayout(stories: MuseumStory[]): MuseumLayout {
   for (const s of stories) {
     if (byTradition[s.tradition] && s.coverThumb) byTradition[s.tradition].push(s);
   }
+  const curatorDef = WALL_DEFS.curator;
   const walls: Record<WallId, HungPainting[]> = {
     roman: layoutWall(byTradition.roman, "roman"),
     ramayana: layoutWall(byTradition.ramayana, "ramayana"),
     mahabharata: layoutWall(byTradition.mahabharata, "mahabharata"),
-    curator: [], // hung in the curator's wall sprint
+    curator: pickAcquisitions(stories).map((story, i) => ({
+      story,
+      position: curatorDef.point(CURATOR.acquisitionTs[i], 2.0),
+      rotationY: curatorDef.rotationY,
+      width: CURATOR.acquisitionW,
+      height: CURATOR.acquisitionW * ASPECT,
+      badge: "NEW",
+    })),
   };
   const slugsByWall = Object.fromEntries(
     (Object.keys(walls) as WallId[]).map((w) => [

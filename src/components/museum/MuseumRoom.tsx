@@ -13,9 +13,10 @@ import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import Painting from "./Painting";
 import WalkControls, { lockSaves, saveCamera } from "./WalkControls";
-import { makeTextTexture } from "./textures";
+import { makePlacardTexture, makeTextTexture } from "./textures";
 import {
   buildLayout,
+  CURATOR,
   ROOM,
   WALL_DEFS,
   WALL_LABELS,
@@ -116,7 +117,7 @@ function RoomShell() {
   );
 }
 
-function WallLabel({ wall }: { wall: WallId }) {
+function WallLabel({ wall, t = 0 }: { wall: WallId; t?: number }) {
   const label = useMemo(
     () =>
       makeTextTexture(WALL_LABELS[wall], {
@@ -131,13 +132,77 @@ function WallLabel({ wall }: { wall: WallId }) {
   const w = h * label.aspect;
   const def = WALL_DEFS[wall];
   return (
-    <group position={def.point(0, 4.35)} rotation={[0, def.rotationY, 0]}>
+    <group position={def.point(t, 4.35)} rotation={[0, def.rotationY, 0]}>
       <mesh>
         <planeGeometry args={[w, h]} />
         <meshBasicMaterial map={label.texture} transparent opacity={0.92} />
       </mesh>
-      <pointLight position={[0, -0.4, 1.2]} intensity={2.2} distance={4} color={WALL_TINTS[wall]} />
+      <pointLight position={[0, -0.4, 1.2]} intensity={3} distance={4.5} color={WALL_TINTS[wall]} />
     </group>
+  );
+}
+
+function CuratorPlacard() {
+  const plate = useMemo(() => makePlacardTexture(), []);
+  const spotRef = useRef<THREE.SpotLight>(null);
+  const targetRef = useRef<THREE.Object3D>(null);
+  useEffect(() => {
+    if (spotRef.current && targetRef.current) {
+      spotRef.current.target = targetRef.current;
+    }
+  }, []);
+  const w = CURATOR.placardW;
+  const h = w / plate.aspect;
+  const def = WALL_DEFS.curator;
+  return (
+    <group
+      position={def.point(CURATOR.placardT, CURATOR.placardY)}
+      rotation={[0, def.rotationY, 0]}
+    >
+      <mesh position={[0, 0, -0.045]}>
+        <boxGeometry args={[w + 0.3, h + 0.3, 0.1]} />
+        <meshStandardMaterial color="#4a3a22" metalness={0.55} roughness={0.45} />
+      </mesh>
+      <mesh position={[0, 0, 0.012]}>
+        <planeGeometry args={[w, h]} />
+        <meshStandardMaterial map={plate.texture} roughness={0.8} metalness={0} />
+      </mesh>
+      <object3D ref={targetRef} position={[0, 0, 0]} />
+      <spotLight
+        ref={spotRef}
+        position={[0, h / 2 + 1.6, 2.1]}
+        angle={0.7}
+        penumbra={0.7}
+        intensity={34}
+        distance={9}
+        decay={1.6}
+        color="#ffe2b0"
+      />
+    </group>
+  );
+}
+
+// Dim cool fills so the corners never go pitch black between light pools.
+function CornerFills() {
+  const r = ROOM.half - 3;
+  return (
+    <>
+      {[
+        [r, r],
+        [r, -r],
+        [-r, r],
+        [-r, -r],
+      ].map(([x, z], i) => (
+        <pointLight
+          key={i}
+          position={[x, 3.4, z]}
+          intensity={1.8}
+          distance={10}
+          decay={1.8}
+          color="#565478"
+        />
+      ))}
+    </>
   );
 }
 
@@ -187,6 +252,10 @@ function FocusManager({
     if (prompt && title) {
       if (best) {
         title.textContent = bestTitle;
+        const tradition = hungs.find((h) => h.story.slug === best)?.story
+          .tradition;
+        prompt.style.borderColor =
+          (tradition && WALL_TINTS[tradition]) || "";
         prompt.style.display = "flex";
       } else {
         prompt.style.display = "none";
@@ -263,6 +332,10 @@ function Paintings({
       {(["roman", "ramayana", "mahabharata"] as WallId[]).map((w) =>
         layout.walls[w].length > 0 ? <WallLabel key={w} wall={w} /> : null,
       )}
+      {layout.walls.curator.length > 0 && (
+        <WallLabel wall="curator" t={CURATOR.labelT} />
+      )}
+      <CuratorPlacard />
       <FocusManager hungs={hungs} registry={registry} />
     </group>
   );
@@ -324,7 +397,8 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
       >
         <color attach="background" args={["#0a0a0f"]} />
         <fog attach="fog" args={["#0a0a0f", 22, 45]} />
-        <ambientLight intensity={0.35} color="#8d92c4" />
+        <ambientLight intensity={0.24} color="#8d92c4" />
+        <CornerFills />
         <WalkControls />
         <RoomShell />
         <Suspense fallback={null}>

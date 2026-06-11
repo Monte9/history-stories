@@ -47,15 +47,30 @@ export default function Painting({
   const placard = useMemo(
     () =>
       makeTextTexture(story.title, {
-        color: "#c9c9d8",
+        color: "#e6e6f2",
         fontPx: 48,
         weight: "400",
         letterSpacing: 0.04,
+        background: "rgba(10, 9, 14, 0.85)",
       }),
     [story.title],
   );
-  const placardH = 0.14;
-  const placardW = Math.min(width * 0.85, placardH * placard.aspect);
+  const placardH = 0.2;
+  const placardW = Math.min(width * 0.95, placardH * placard.aspect);
+
+  const badge = useMemo(
+    () =>
+      hung.badge
+        ? makeTextTexture(hung.badge, {
+            color: "#171005",
+            fontPx: 56,
+            weight: "700",
+            letterSpacing: 0.12,
+            background: "#e7b54a",
+          })
+        : null,
+    [hung.badge],
+  );
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
@@ -75,10 +90,20 @@ export default function Painting({
         <meshStandardMaterial map={texture} roughness={0.85} metalness={0} />
       </mesh>
       {/* placard */}
-      <mesh position={[0, -(height / 2 + 0.28), 0.012]}>
+      <mesh position={[0, -(height / 2 + 0.32), 0.012]}>
         <planeGeometry args={[placardW, placardH]} />
-        <meshBasicMaterial map={placard.texture} transparent opacity={0.9} />
+        <meshBasicMaterial map={placard.texture} transparent opacity={0.95} />
       </mesh>
+      {/* badge tag */}
+      {badge && (
+        <mesh
+          position={[width / 2 - 0.25, height / 2 + 0.26, 0.012]}
+          rotation={[0, 0, 0.06]}
+        >
+          <planeGeometry args={[0.22 * badge.aspect, 0.22]} />
+          <meshBasicMaterial map={badge.texture} />
+        </mesh>
+      )}
       {/* picture light */}
       <object3D ref={targetRef} position={[0, 0, 0]} />
       <spotLight
