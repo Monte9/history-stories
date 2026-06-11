@@ -14,7 +14,7 @@ Acceptance criteria:
 - `/gallery` serves the previous card grid unchanged in function; `/` links to it ("Gallery view") and `/gallery` links back ("Enter the museum"); story pages still render
 - At 390px, `/` shows the canvas plus a reachable "Gallery view" link, no horizontal overflow on `/` or `/gallery`
 
-## Sprint 2: Walking — pending
+## Sprint 2: Walking — done (2026-06-11, PASS)
 
 Keyboard movement with smoothing and wall collision (SPEC 3.1). HUD position/heading live. First-visit hint overlay.
 
