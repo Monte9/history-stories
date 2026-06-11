@@ -101,7 +101,11 @@ export default async function StoryPage({
       {/* Footer */}
       <footer className="border-t border-[var(--color-border)] py-8 text-center text-sm text-[var(--color-text-muted)]">
         <Link href="/" className="hover:text-[var(--color-accent)]">
-          ← Back to all stories
+          ← Back to the museum
+        </Link>
+        <span className="mx-3 opacity-40">·</span>
+        <Link href="/gallery" className="hover:text-[var(--color-accent)]">
+          Gallery view
         </Link>
       </footer>
     </div>

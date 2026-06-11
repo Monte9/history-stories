@@ -5,4 +5,5 @@ out/
 *.tsbuildinfo
 .vercel
 agent/evals/shots/
+public/covers/thumbs/
 
