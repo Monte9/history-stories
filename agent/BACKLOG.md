@@ -4,6 +4,8 @@ Ordered sprints. One sprint = one harness run. Each sprint must be small enough 
 
 2026-06-11: Monte tested the finished museum and gave direction-changing feedback (bright Broad-style room, trackpad movement, gaze focus, taste passes). Sprints 7-11 below encode it. The original "Sprint 7: Touch polish" was never built; its still-valid items are folded into Sprint 9 (see the superseded section at the bottom).
 
+2026-06-11 (second revision): GOAL.md rewritten with two new goals — a third-person body and live multiplayer presence (SPEC sections 11-12). Sprints 12-16 encode them. **Process change (Monte, today):** sprint criteria below are DRAFTS. At sprint start, the builder and a fresh evaluator align on the final list per RUBRIC "Criteria alignment" and record it in this file (marked "aligned") plus `agent/evals/<ts>-sprint-N-criteria.md` before any feature code.
+
 ## Sprint 1: The room exists — done (2026-06-11, PASS)
 
 R3F scene at `/`, walls + floor + lighting, all story covers hung by tradition with wall labels, static camera. Grid moves to `/gallery`. Thumb pipeline (sharp prebuild/predev, gitignored `public/covers/thumbs/`). `?face=<wall>` eval affordance and the `#museum-hud` skeleton (SPEC section 7) ship now.
@@ -142,6 +144,70 @@ Sprint 10's attempt-2 re-evaluation found zero remaining "blocks shippable" find
 - Walls perfectly uniform, fusing at corners (no seam/AO shading)
 - Content quirk: the plato story's cover art has "THE SILENT SENATE" baked in while its placard reads its real title (story pipeline, not museum code)
 - Lint for em dashes in generated story prose (add to the story-from-history skill)
+
+---
+
+## Sprint 12: The body — third-person view — pending
+
+SPEC 11. The procedural articulated avatar (anatomy + gait per 11.2), `playerStore`, the chase-camera rig with boom wall-clamp (11.3), player-aim focus (11.4), the `V` / `#museum-cam-toggle` / `?cam=` mode switch, and HUD additions `data-cam-mode` / `data-cam-dist` / `data-speed` (11.5). Third person becomes the default; first person survives as a toggle. No presence code this sprint.
+
+Draft acceptance criteria (alignment pending):
+
+- Third person by default: a fresh load of `/?face=roman` at 1280x900 shows a full human figure from behind — head, torso, two arms, two legs, distinct clothing tones — in the lower-center of frame with the Rome wall and paintings clearly visible beyond it; `data-cam-mode` reads `"third"`
+- Movement parity: arrows/WASD, wheel, pointer drag, and the 390px touch cluster all still drive `data-x`/`data-z`/`data-heading`/`data-pitch` with their sprint-2/8 semantics (now the player), and the avatar visibly walks and turns at the player's position in screenshots
+- The gait reads as human: screenshots ~300 ms apart while walking show clearly different limb poses (alternating legs, counter-swinging arms); `data-speed` tracks planar speed; stopping settles into a natural idle pose within ~0.5 s (not a mid-stride freeze); no skating (limbs static while `data-x`/`data-z` change) in any sample
+- Focus, Enter, Escape unchanged from the new view: at `/?face=roman` the center painting focuses (`data-focused`), turning hands focus off/along, Enter opens the story, Escape returns to the same spot, heading, and camera mode
+- The camera never leaves the room: backing the player into each wall and one corner shows no void or wall clip in screenshots; `data-cam-dist` shrinks below its default while the body fades or clears rather than blinding the view
+- Mode toggle: pressing `V` (and tapping the visible `#museum-cam-toggle`, present on coarse pointers) flips `data-cam-mode`; in first person no part of your own body is visible and all controls/focus work as shipped; `?cam=first` forces the mode for a load; the chosen mode survives a story round trip; zero console errors; `pnpm build` green
+
+## Sprint 13: Presence plumbing — transport, protocol, local eval mode — pending
+
+SPEC 12.2-12.3. The `PresenceTransport` abstraction, the BroadcastChannel `?net=local` reference transport, the trystero/Nostr `webrtc` production default (lazy chunk, silent degrade to `off`), `?net=off`, the state/bye protocol with tick rates and heartbeat timeout, and the HUD presence contract (`data-net`, `data-peers`, per-peer nodes per 12.6). No remote bodies render yet — this sprint proves the data flows; bodies land in sprint 14. Adds the `trystero` dependency.
+
+Draft acceptance criteria (alignment pending):
+
+- Two Playwright pages in one browser context at `/?net=local` discover each other: each page's `#museum-hud` reaches `data-net="local"` and `data-peers="1"`, with one `.museum-peer` node exposing `data-peer-id`, `data-peer-label`, `data-peer-color`, `data-peer-x`, `data-peer-z`, `data-peer-heading`, `data-peer-state`
+- Live streaming: while page A walks, page B's `data-peer-x`/`-z` pass through multiple intermediate values (sampled every ~100 ms, no gap > 1 unit) and settle within 0.3 units of page A's final `data-x`/`data-z`; heading tracks turns the same way
+- Clean leave: closing page A removes its peer node on page B within 5 s and `data-peers` returns to `"0"`; reloading page A rejoins as one peer with no ghost duplicate (`data-peers` never overcounts a single human)
+- Production path: with no `?net` param, the HUD settles on `data-net="webrtc"` (joined) or `data-net="off"` (graceful degrade when relays/WebRTC are unreachable, as in the eval sandbox) with zero console errors either way, and the solo room is behaviorally identical to sprint 12 in both cases
+- Opt-out and regression: `/?net=off` loads no presence networking (no presence network requests, `data-peers` stays `"0"`); the full solo keyboard journey passes; `pnpm build` green
+
+## Sprint 14: Company — remote bodies materialize and walk — pending
+
+SPEC 12.4-12.5. Remote avatars reusing `AvatarBody` with palette tints and `Visitor N` billboard labels, the entering/live/leaving lifecycle with staged fades, 150 ms interpolation driving remote gait, the teleport rule, and the `#museum-presence-count` chip. Verified entirely over `?net=local`.
+
+Draft acceptance criteria (alignment pending):
+
+- With pages A and B at `/?net=local`, B's 1280x900 screenshot shows a second full human figure at A's position wearing a visibly distinct accent color from your own neutral body, with a floating `Visitor N` label above its head matching `data-peer-label` and legible against the white wall
+- Staged lifecycle, never pops: the peer node passes `data-peer-state` `"entering"` → `"live"` on join and `"leaving"` before removal on close; the figure is fully gone within 5 s of A closing; screenshots near join or leave catch a transitional (faded/scaling) body or the state attributes prove the staging
+- Alive movement: while A walks a straight line, B's figure advances smoothly (`data-peer-x`/`-z` sampled at 100 ms show monotonic progress, no step > 0.5 units) with legs and arms visibly animating between screenshots; when A stops, the figure settles to idle (limb poses stop changing)
+- Remote turning: A turning in place rotates B's figure to the new facing (`data-peer-heading` tracks within ~15°; a screenshot shows the body oriented the new way)
+- Company indicator, solo-graceful: `#museum-presence-count` appears on B only while A is present (and counts correctly) and is absent when alone and under `?net=off`; remote bodies never change local `data-x`/`data-z`/`data-focused`, never block focus or taps, and walking through one is unobstructed
+- Regression both modes and viewports: first person shows remote bodies but not your own; at 390px with a peer present there is no overflow and the touch cluster still moves the player; zero console errors; `pnpm build` green
+
+## Sprint 15: Presence hardening — reconnects, idle, a handful at once — pending
+
+SPEC 12.3 edge rules. Story-round-trip rejoin, heartbeat/idle stability, the teleport rule under `?face=` jumps, the 8-peer render cap, and multi-peer performance on desktop and mobile.
+
+Draft acceptance criteria (alignment pending):
+
+- Round-trip rejoin: page A enters a story and returns to the room; page B sees a clean despawn then re-materialize, with `data-peers` accurate at every step (never 2 for one human, no ghost left behind); A re-acquires B the same way
+- Idle stability: a peer idle for 60+ s stays present and stationary on the other page (no drift, flicker, or false despawn); closing the idle tab still despawns it within 5 s
+- Teleport handling: when A jumps discontinuously (reload at `/?face=mahabharata&net=local` from a far corner), B's figure repositions without gliding across the room (no visible > 3-unit slide; fade-out/in or instant repose per SPEC 12.3)
+- A handful at once: with 5 concurrent pages at `/?net=local`, the primary page shows 4 distinct labeled, distinctly tinted figures, `data-peers="4"`, and local walking stays smooth (`data-x` updates continuously while holding forward, no input stalls); at 390px the same scene has no overflow and usable controls
+- Cap and solo regression: peers beyond the render cap are ignored without errors (`data-peers` never exceeds 8); solo loads (`webrtc` degrade and `?net=off`) remain behaviorally identical to sprint 12; zero console errors; `pnpm build` green
+
+## Sprint 16: Taste pass — the body and the company feel shippable — pending
+
+Process sprint, sprint-10 pattern. The evaluator runs a curator taste audit (RUBRIC) of the third-person and presence experience at both viewports: avatar look and proportions, gait quality at all speeds and while turning, chase-camera framing and feel near walls, label and count-chip legibility, materialize/despawn feel, multi-peer composition. Top findings convert to ACs before any code.
+
+Draft acceptance criteria (alignment pending):
+
+- A taste audit file exists in `agent/evals/` with screenshot evidence (solo and two-peer scenes, both viewports) and ranked findings, each rated "blocks shippable" or "nice to have"
+- The top 3-5 findings are recorded under this sprint as concrete interaction-verifiable ACs before feature code is written
+- Every converted AC is demonstrated fixed by interaction and screenshot
+- A post-fix re-audit in `agent/evals/` shows zero remaining "blocks shippable" findings
+- No regressions: sprint 12 third-person journey, sprint 13-15 two-page presence flows, solo keyboard journey, HUD contract, `pnpm build` green
 
 ---
 

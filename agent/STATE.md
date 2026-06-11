@@ -1,12 +1,14 @@
 # Harness State
 
 - phase: build
-- sprint: backlog complete (sprints 7-10 PASS, 11 skipped; awaiting Monte's review)
+- sprint: 12 (pending) — The body: third-person view
 - attempts: 0
 - last_verdict: PASS (sprint 10, attempt 2)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.
+
+Note for the next run: GOAL.md was rewritten 2026-06-11 (third-person body + multiplayer presence). SPEC sections 11-12 and sprints 12-16 encode it. Sprint criteria are now DRAFTS; builder and evaluator align the final list at sprint start (RUBRIC "Criteria alignment") before any feature code.
 
 ## History
 
@@ -26,3 +28,4 @@ Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.
 | 2026-06-11 | 9 | build | PASS first attempt, landed on main |
 | 2026-06-11 | 10 | build | taste audit -> 5 blockers + 7 nice-to-haves fixed; FAIL attempt 1 (prompt flash in reveal); PASS attempt 2, landed on main |
 | 2026-06-11 | 11 | - | skipped: re-audit clean, no blocks-shippable findings remain |
+| 2026-06-11 | - | plan | GOAL.md rewritten (third-person body + live presence); SPEC sections 11-12 appended; sprints 12-16 planned with draft ACs; cursor -> sprint 12 |

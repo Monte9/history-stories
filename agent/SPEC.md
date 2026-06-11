@@ -4,6 +4,8 @@ Derived from `agent/GOAL.md` (2026-06-11), revised 2026-06-11 after Monte's live
 
 > **Direction change (2026-06-11, Monte's live feedback — supersedes GOAL.md "museum at night"):** the room is now a bright daylight gallery modeled on The Broad's third-floor gallery in LA (Monte supplied a reference photo): white walls, light polished-concrete floor, and a glowing honeycomb "veil" skylight ceiling that provides even, soft illumination everywhere. Section 2.3 below replaces the old night-lighting spec. Future agents: do NOT revert to the dark room; Monte's live feedback wins over the GOAL.md atmosphere line. Site chrome and other pages keep the existing dark theme.
 
+> **Extension (2026-06-11, second revision): GOAL.md was rewritten the same day with two new goals — a third-person body and live multiplayer presence.** Sections 11-12 (appended) spec them. One semantic clarification to section 7: `data-x` / `data-z` / `data-heading` / `data-pitch` describe the PLAYER, not the camera (in first person the two are identical, so every shipped assertion keeps passing). Everything else in sections 1-10 stands. Note for accuracy: the shipped museum runs on `three` + `@react-three/fiber` only; drei (mentioned in 1.1) was never actually needed or installed, and sections 11-12 add no new 3D dependencies.
+
 ---
 
 ## 1. Architecture decisions
@@ -194,6 +196,8 @@ A visually-hidden `<div id="museum-hud">` on `/`, attributes mutated directly ea
 
 Visible DOM elements the evaluator can assert: `#museum-prompt` (focus prompt), the hint overlay, the touch control cluster, the "Gallery view" link. Existing attribute semantics are frozen; `data-pitch` is the only addition.
 
+> **Clarification (2026-06-11, second revision):** `data-x/z/heading/pitch` describe the PLAYER. Through sprint 10 the player and the camera were the same point, so this is not a behavior change and every shipped assertion holds. From sprint 12 on, the camera may trail the player (third person); the HUD keeps reporting the player. New attributes for camera mode and presence are specced in 11.5 and 12.6 — they are additions; nothing in the table above changes meaning.
+
 ---
 
 ## 8. Data model
@@ -232,6 +236,8 @@ src/components/EscapeReturn.tsx          Escape -> router.push("/")
 - Light count bounded: hemisphere + ambient + (optional) accent spots, no shadows; target 60 fps on a mid laptop, degrade gracefully via DPR clamp.
 - Loading: room fades in once `data-loaded="true"`; before that, a minimal "Entering the museum…" state. No flash of unlit/untextured geometry.
 
+(Revised by 12.7: the `/` budget rises to ≤ 400 KB gzipped once the lazy presence chunk lands.)
+
 ---
 
 ## 10. Fallbacks and accessibility
@@ -241,3 +247,168 @@ src/components/EscapeReturn.tsx          Escape -> router.push("/")
 - **`/gallery`** is the permanent flat path: every story reachable by normal links, no canvas required.
 - **Reduced motion:** `prefers-reduced-motion` halves movement speed and disables the fade/easing flourishes; a small note offers the gallery link.
 - Story pages remain fully static, crawlable, and keyboard accessible (carousel dots are buttons, panels have alt text).
+
+---
+
+## 11. The body: third-person view (new, 2026-06-11 second revision)
+
+GOAL.md #1: "I want to see my human body, especially as I walk." Third person becomes the default view; a readable human avatar stands in the room and walks where you walk. Everything in sections 3-4 keeps working unchanged.
+
+### 11.1 Decision: procedural articulated avatar, zero new 3D dependencies
+
+**Decision:** the body is a code-built articulated human — a hierarchy of ~18 primitive meshes (head, neck, torso, pelvis; per side: upper arm, forearm, hand, thigh, calf, foot) under one group, posed every frame by a deterministic gait function. No GLB, no GLTFLoader, no AnimationMixer, no drei.
+
+Why procedural over a vendored CC0 rigged GLB (Quaternius/KayKit class):
+
+- **Zero acquisition risk.** This build environment's egress may block downloading model files; a procedural body cannot be blocked, and the sprint cannot stall on an asset hunt or license vetting.
+- **Exact gait sync.** The walk cycle is driven directly by the same velocity pipeline that moves the player, so stride frequency tracks speed precisely and feet never skate. Clip-based animation only approximates this with playback-rate hacks.
+- **Cheap per peer.** Shared geometries, per-peer cloned materials for tinting (section 12), no skinned mesh or skeleton per avatar. Matters once several visitors stand in the room on a phone.
+- **Deterministic and evaluable.** Pose is a pure function of (speed, phase, time); screenshots are reproducible.
+
+The cost is stylization: a clean, faceless, modern gallery figure rather than a photoreal human. That suits the Broad room. GOAL.md's stated failure mode is "a sliding mannequin or a floating capsule" — the sin is skating and stiffness, which the gait spec (11.2) addresses; mesh fidelity is secondary. **Upgrade path:** the body hides behind an `AvatarBody` component whose input is a pose (speed, gait phase, heading, tint), so a rigged GLB could replace the primitives later without touching camera, gait, or presence code. Whether to spend that fidelity budget is a future taste call for Monte, not a sprint here.
+
+### 11.2 Avatar anatomy and gait
+
+- **Proportions:** total height ~1.75 (room eye height 1.6 preserved as the aim origin), believable ratios: head ~0.24 tall, legs ~52% of height, shoulder width ~0.44. Rounded primitives (capsules / capsule-box mix), matte materials (roughness ~0.8), no shadows.
+- **Color blocking** so it reads as a clothed person, not a wood figure: neutral-warm head and hands, distinct shirt tone, darker trousers, near-black shoes. The local player wears neutral warm charcoal; remote visitors get the tint palette (12.4).
+- **Walk gait:** phase advances at `2π · speed / stride` (stride ~0.85 u per step, ≈ 1.75 Hz full cycle at 3 u/s). Legs swing in antiphase ±~32° at the hip with knee flex up to ~45° during swing (no straight-leg compass gait), feet lift ~0.12 u, arms counter-swing ±~22° opposite the same-side leg with a slight elbow bend, torso bobs ±~0.03 u at twice the cycle frequency, slight forward lean (~4°) scaling with speed. Backward walking plays the cycle in reverse at reduced amplitude.
+- **Turn-in-place** (|turn rate| > ~30°/s, speed ≈ 0): a low-amplitude stepping shuffle (small alternating foot lifts ~2 Hz) so rotating never looks like a statue on a turntable.
+- **Idle** (speed < 0.05): blend to a natural stance within ~250 ms; subtle breathing (chest/shoulders ±0.01 u at ~0.25 Hz) and a very slow weight sway. Never a frozen mid-stride pose.
+- **Blending:** pose targets lerp over ~120-250 ms across walk/turn/idle transitions; no snapping.
+- **Raycast-inert:** avatar meshes never intercept pointer raycasts (noop `raycast` or layers), so tapping a painting through or past a body always works.
+
+### 11.3 Player rig: camera modes, boom, wall collision
+
+`WalkControls` keeps sole ownership of input → velocity → clamp → player state; nothing in section 3 changes. Player state (x, z, heading, pitch, speed) moves into a plain `playerStore` module (same pattern as `focusStore`), written only by WalkControls each frame; the camera rig, FocusManager, local avatar, and presence sender all read from it.
+
+- **Modes:**
+  - `third` (default): camera on a boom behind the player — default boom ~3.1 u, camera height ~2.35, looking at a point ~1.45 u high at the player. The whole rig yaws with heading; pitch tilts the look (pitching up raises the look target so the top row is still aimable). At default boom the full body is visible, occupying roughly the lower third of a 1280×900 frame, with the facing wall and paintings clearly visible past it.
+  - `first`: camera at the eye, exactly the shipped behavior; the local body is fully hidden (no limbs in view). First person survives as a toggle because it is near-free and better for close reading.
+- **Boom collision (camera AND body stay in the room):** each frame the ideal camera point is clamped to the room interior inset 0.35 from walls and ceiling; if outside, the boom shortens along its axis until the camera is inside. Minimum boom 0.7. The camera never clips a wall and never shows the void. When the boom is < ~1.3 the local body fades toward transparent so it cannot blind the view, restoring as the boom re-extends. Optional light positional smoothing on the camera (≤ ~120 ms) for feel; disabled under `prefers-reduced-motion`.
+- **Toggle:** keyboard `V`, plus a visible DOM button `#museum-cam-toggle` (top-right cluster near the "Gallery view" link, accessible label), required on coarse pointers. Mode persists in `sessionStorage` `museum.camMode.v1` and survives story round trips; new sessions default to `third`. `?cam=first|third` forces a mode for that load (eval affordance, same spirit as `?face=`); `?face=` itself only places the player and does not touch the mode.
+
+### 11.4 Aiming and focus from third person
+
+- **The aim ray is the player's, not the camera's:** origin at the player eye (x, 1.6, z), direction from heading + pitch. FocusManager keeps its exact section-4.1 math but reads `playerStore` instead of the camera. In first person this is identical to today by construction.
+- **Observable contract:** the chase camera sits directly behind the player on the same heading, so the focused painting is the one at/near horizontal screen center, above the avatar's head. Point-blank focus, cross-room focus, empty-wall unfocus, `data-focused`, `#museum-prompt`, Enter, and Escape-return all behave exactly as sections 4.1-4.2.
+- **Tap focus** raycasts from the rendering camera (taps hit what they visually hit); bodies never intercept (11.2). The `focusStore.tapSlug` override is unchanged.
+
+### 11.5 HUD and persistence extensions (extends section 7; existing semantics frozen)
+
+New `#museum-hud` attributes:
+
+| Attribute | Value |
+|---|---|
+| `data-cam-mode` | `"third"` or `"first"` |
+| `data-cam-dist` | current boom length, 2 decimals (`"0.00"` in first person) |
+| `data-speed` | player planar speed in units/s, 2 decimals |
+
+`sessionStorage`: `museum.camera.v1` unchanged (player pose). New key `museum.camMode.v1` = `"third" | "first"`.
+
+---
+
+## 12. Company: live presence (new, 2026-06-11 second revision)
+
+GOAL.md #2: every live visitor materializes in the same room, walks around with their own body in real time, and vanishes gracefully. Target scale: a handful of friends. Anonymous: bodies with a generated label and a color variant, nothing else. Solo-graceful: alone, the room is exactly as good as today.
+
+### 12.1 Transport decision: WebRTC via trystero (Nostr signaling), zero credentials
+
+**Decision:** production presence uses **trystero** (MIT, ~v0.23, actively maintained) with its default **Nostr** strategy: peers discover each other through public Nostr relays (hundreds active; trystero spreads across a relay list for redundancy), then all traffic flows peer-to-peer over WebRTC data channels, end-to-end encrypted. The relays never see app data, only encrypted rendezvous. No account, no API key, no server: it works the moment it lands on main, which GOAL.md explicitly prefers. Config: `{ appId: "history-stories-museum" }`, room `"main"` — one museum room, one presence room. trystero's MQTT strategy (public brokers) is the documented in-code fallback knob if Nostr relays degrade; same API, one-line swap.
+
+Why not the alternatives:
+
+- **y-webrtc public signaling:** its default public servers have a documented history of outages and discontinuation; reliability would rest on infrastructure nobody maintains.
+- **PeerJS public cloud:** a single central broker, and no room discovery — peers must exchange IDs out of band, which forces building a rendezvous service anyway.
+- **PartyKit / Liveblocks / Supabase Realtime:** more dependable rendezvous, but all require an account (and a publishable key committed to a public repo). Violates the zero-credential first ship.
+
+> **Decision for Monte (surfaced per GOAL.md, not blocking any sprint):** two known limits of the free path. **(1) Public relay flakiness:** if friends occasionally fail to see each other, the robust upgrade is Supabase Realtime presence (free tier; the anon key is publishable and safe in a public repo, but Monte must create the project) or PartyKit (free tier; account plus a one-time deploy). The transport abstraction below makes either a drop-in third transport, no protocol changes. **(2) NAT traversal:** with no TURN server, a small fraction of peer pairs (symmetric-NAT cellular networks, strict corporate NATs) cannot form a WebRTC connection at all. Free-tier TURN (Cloudflare, metered.ca) also needs an account and key. Recommendation: ship zero-credential now; revisit only if real-world misses are observed.
+
+### 12.2 Transport abstraction and the local eval transport
+
+All networking sits behind one interface so the room never knows which wire it is on, and so presence is provable with zero internet (the evaluator's sandbox may block all egress):
+
+```ts
+type PeerState = { x: number; z: number; heading: number; pitch: number; speed: number };
+
+interface PresenceTransport {
+  readonly kind: "webrtc" | "local" | "off";
+  join(room: string): void;                                   // idempotent
+  sendState(s: PeerState): void;                              // fire-and-forget, latest-wins
+  onPeerState(cb: (id: string, s: PeerState, at: number) => void): void;
+  onPeerLeave(cb: (id: string) => void): void;
+  leave(): void;                                              // best-effort bye
+}
+```
+
+Selection via `?net=` (permanent affordance, like `?face=`):
+
+- **(no param) → `webrtc`:** dynamic-import the trystero chunk only after `data-loaded="true"`. Any failure (import, join, relays unreachable, WebRTC unsupported) degrades silently to `off` — at most one `console.info`, never a `console.error`, so the zero-console-error eval gate stays meaningful and the solo museum is untouched.
+- **`?net=local` → `local`:** a `BroadcastChannel("museum.presence.local")` transport with a per-tab random id. Same-origin tabs in one browser profile (including two Playwright pages in one context) see each other with no internet. Join is announced by first state; leave by `bye` plus heartbeat timeout. This is not test-only throwaway: it is the reference implementation of the protocol layer (12.3), which trystero merely re-wires.
+- **`?net=off` → `off`:** no presence module loads at all; zero network and CPU cost.
+
+The no-WebGL fallback and `/gallery` never load presence in any mode.
+
+### 12.3 Wire protocol
+
+- **Identity:** ephemeral per-session peer id (trystero `selfId`; random hex for local). Payloads are pose-only; no PII exists anywhere in the protocol by construction.
+- **Messages** (one JSON action, trystero `makeAction("st")` plus a `bye`):
+  - `state { x, z, h, p, s }` — quantized to 2 decimals (≤ ~80 bytes). The first state from an unknown id IS the join signal; periodic states are the heartbeat.
+  - `bye {}` — best effort on `pagehide` and room unmount.
+- **Tick:** 10 Hz while moving (pose changed > 0.01 u or 0.5°); heartbeat every 2 s while idle. Receiver timeout 6 s (3 missed heartbeats) = leave.
+- **Receive pipeline per peer:** keep the last two timestamped states; render the avatar ~150 ms behind newest with position lerp and shortest-arc heading lerp; extrapolate at most 250 ms across gaps, then freeze into the idle pose. Remote gait is driven by the interpolated speed, so their legs move exactly when their body moves and stop when it stops. Smoothness bar: a remote walking at full speed renders with no visible step > 0.5 u between frames.
+- **Teleport rule:** a state jump > 3 u (peer used `?face=`, or returned from a story across the room) repositions via a quick fade-out/in at the new spot — never a cross-room glide.
+- **Peer cap:** render at most 8 remote avatars; additional peers are tracked but not rendered (handful-scale target; the cap protects mobile).
+
+### 12.4 Identity: colors and labels
+
+- **Color:** `colorIndex = hash(peerId) mod 8` into a fixed palette of 8 muted, white-wall-legible tints — terracotta `#b85c38`, teal `#2d7d72`, indigo `#4f5d9e`, ochre `#b08b2e`, plum `#8e4f79`, moss `#6b7f3a`, slate `#5b7793`, rose `#b06161` (generator may tune shades; must keep 8 clearly distinct hues). Applied to the remote shirt and label accent. The local body stays neutral charcoal so company pops. Collisions at handful scale are acceptable.
+- **Label:** `Visitor N`, assigned locally in arrival order: the first peer you see this session is "Visitor 2" (you are implicitly 1 and unlabeled). Numbering is per-observer, not globally consistent — acceptable: anonymous, no chat, nobody can compare notes. Rendered as a billboard sprite (canvas texture, dark text on an off-white pill, placard-styled) ~0.35 u above the head, legible in a 1280×900 screenshot from across the room.
+
+### 12.5 Remote avatar rendering and lifecycle
+
+- Remote bodies reuse `AvatarBody` (shared geometry, cloned tinted materials).
+- **Lifecycle, each state mirrored to the DOM (12.6):** `entering` (first state received: fade/scale in over ~400 ms) → `live` → `leaving` (bye or timeout: fade out ~400 ms, then unmount). Materializing and vanishing are staged, never pops.
+- Remote bodies are scenery: no collision with the local player (walking through one is fine), raycast-inert, never grab focus, never alter local controls or the HUD's player attributes.
+- A small visible chip `#museum-presence-count` (e.g. "2 in the room", styled like the nav pill) appears only while rendered peers ≥ 1; hidden when alone and under `?net=off`. This is the only UI presence adds, and only with company — solo-graceful holds.
+
+### 12.6 Evaluability contract extensions (presence)
+
+On `#museum-hud`:
+
+| Attribute | Value |
+|---|---|
+| `data-net` | `"webrtc"` \| `"local"` \| `"off"` — the settled transport for this load |
+| `data-peers` | count of currently rendered remote avatars |
+
+Plus one child node per rendered peer, `<div class="museum-peer">`, attributes updated at ≥ 10 Hz:
+
+| Attribute | Value |
+|---|---|
+| `data-peer-id` | transport peer id |
+| `data-peer-label` | e.g. `Visitor 2` |
+| `data-peer-color` | assigned palette hex |
+| `data-peer-x`, `data-peer-z`, `data-peer-heading` | the rendered (interpolated) pose, 2 decimals |
+| `data-peer-state` | `entering` \| `live` \| `leaving` |
+
+Contract: two Playwright pages joined via `?net=local` can prove materialize-in, smooth interpolated movement (sample `data-peer-x/z` over time), label/color variants, and clean despawn from these attributes plus screenshots — no pixel reading, no internet.
+
+### 12.7 Performance and solo-graceful budgets
+
+- Each avatar ≤ ~20 meshes / ~2k triangles, geometry shared across all bodies; per-frame pose updates allocation-free.
+- Presence chunk (trystero + glue) lazy-loaded after `data-loaded`; ≤ ~40 KB gzipped extra. The `/` route budget rises to ≤ 400 KB gzipped (revises section 9); other routes unchanged.
+- Network: ≤ 10 Hz sends, ≤ ~80 bytes per message; at 8 peers under 8 KB/s total.
+- Solo: zero remote meshes and no per-frame presence work beyond the heartbeat timer. No presence failure of any kind may unmount, stall, or error the room. Mobile: the existing DPR clamp plus the peer cap keep 4 simultaneous bodies usable at 390px.
+
+### 12.8 Files (target shape)
+
+```
+src/components/museum/playerStore.ts            player pose written by WalkControls, read by rig/focus/avatar/presence
+src/components/museum/AvatarBody.tsx            shared articulated body + gait pose function (local and remote)
+src/components/museum/PlayerRig.tsx             camera modes, boom + wall clamp, local body mount, V toggle, HUD cam attrs
+src/components/museum/presence/types.ts         PresenceTransport, PeerState
+src/components/museum/presence/local.ts         BroadcastChannel reference transport
+src/components/museum/presence/webrtc.ts        trystero wrapper (lazy chunk)
+src/components/museum/presence/PresenceManager.tsx  join/leave, peer map, interpolation, DOM mirror, remote bodies, count chip
+```
+
+Dependency added in the presence sprint: `trystero` (^0.23). Nothing else.
