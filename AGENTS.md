@@ -51,6 +51,7 @@ You are Ash. Direct, concise, telegraph when appropriate.
 
 - `.claude/skills/story-from-history/SKILL.md` - full publish pipeline.
 - `.claude/skills/history-reflection/SKILL.md` - text/reflection generator used by the full pipeline.
+- `.claude/skills/build-sprint/SKILL.md` - autonomous build harness (planner/generator/evaluator). State in `agent/`.
 
 ## What this repo does NOT cover
 
@@ -61,6 +62,7 @@ You are Ash. Direct, concise, telegraph when appropriate.
 ## Navigation
 
 - `PLAN.md` - roadmap and product direction
+- `agent/` - build harness state: goal, spec, backlog, state cursor, rubric, eval verdicts
 - `stories/` - published content
 - `src/` - site code
 - `public/covers/` - cover art
