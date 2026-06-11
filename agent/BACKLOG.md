@@ -50,7 +50,7 @@ Acceptance criteria:
 - Round trip: in the room, walk to a distinct spot, note `data-x`/`data-z`/`data-heading`, Enter a focused painting, press Escape on the story page; back on `/` the HUD values match the noted ones within 0.1
 - Direct load of a story URL (fresh session) then Escape lands at the default spawn with no console errors
 
-## Sprint 5: Curator's wall and night lighting — pending
+## Sprint 5: Curator's wall and night lighting — done (2026-06-11, PASS)
 
 Wall 4 per SPEC 6: entrance placard (title + controls legend) and New Acquisitions (3 most recent stories by date). Atmosphere pass: per-painting spotlights, dark walls, tradition-tinted label washes.
 
