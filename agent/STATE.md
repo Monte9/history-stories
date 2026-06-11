@@ -2,8 +2,8 @@
 
 - phase: build
 - sprint: 8
-- attempts: 0
-- last_verdict: PASS (sprint 7)
+- attempts: 1
+- last_verdict: FAIL (sprint 8 attempt 1: first-load focus highlight registration race)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.

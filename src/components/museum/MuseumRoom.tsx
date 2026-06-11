@@ -314,6 +314,12 @@ function Paintings({
   const register = useCallback(
     (slug: string, fn: (focused: boolean) => void) => {
       registry.set(slug, fn);
+      // FocusManager may have focused this painting before it registered
+      // (first load); sync so the highlight matches data-focused.
+      const focused = document
+        .getElementById("museum-hud")
+        ?.getAttribute("data-focused");
+      fn(slug === focused);
     },
     [registry],
   );
