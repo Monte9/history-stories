@@ -1,9 +1,9 @@
 # Harness State
 
 - phase: build
-- sprint: 12 (pending) — The body: third-person view
+- sprint: 13 (pending) — Presence plumbing: transport, protocol, local eval mode
 - attempts: 0
-- last_verdict: PASS (sprint 10, attempt 2)
+- last_verdict: PASS (sprint 12)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.
@@ -29,3 +29,4 @@ Note for the next run: GOAL.md was rewritten 2026-06-11 (third-person body + mul
 | 2026-06-11 | 10 | build | taste audit -> 5 blockers + 7 nice-to-haves fixed; FAIL attempt 1 (prompt flash in reveal); PASS attempt 2, landed on main |
 | 2026-06-11 | 11 | - | skipped: re-audit clean, no blocks-shippable findings remain |
 | 2026-06-11 | - | plan | GOAL.md rewritten (third-person body + live presence); SPEC sections 11-12 appended; sprints 12-16 planned with draft ACs; cursor -> sprint 12 |
+| 2026-06-11 | 12 | build | aligned ACs first (new workflow); PASS first attempt (1 eval infra retry), landed on main |

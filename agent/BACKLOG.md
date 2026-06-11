@@ -147,7 +147,7 @@ Sprint 10's attempt-2 re-evaluation found zero remaining "blocks shippable" find
 
 ---
 
-## Sprint 12: The body — third-person view — pending
+## Sprint 12: The body — third-person view — done (2026-06-11, PASS)
 
 SPEC 11. The procedural articulated avatar (anatomy + gait per 11.2), `playerStore`, the chase-camera rig with boom wall-clamp (11.3), player-aim focus (11.4), the `V` / `#museum-cam-toggle` / `?cam=` mode switch, and HUD additions `data-cam-mode` / `data-cam-dist` / `data-speed` (11.5). Third person becomes the default; first person survives as a toggle. No presence code this sprint.
 
