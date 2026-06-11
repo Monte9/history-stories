@@ -1,9 +1,9 @@
 # Harness State
 
 - phase: build
-- sprint: 10
-- attempts: 1
-- last_verdict: FAIL (sprint 10 attempt 1: prompt flashes over hint during load reveal)
+- sprint: backlog complete (sprints 7-10 PASS, 11 skipped; awaiting Monte's review)
+- attempts: 0
+- last_verdict: PASS (sprint 10, attempt 2)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.
@@ -24,3 +24,5 @@ Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.
 | 2026-06-11 | 7 | build | PASS first attempt, landed on main |
 | 2026-06-11 | 8 | build | FAIL attempt 1 (first-load highlight race); PASS attempt 2, landed on main |
 | 2026-06-11 | 9 | build | PASS first attempt, landed on main |
+| 2026-06-11 | 10 | build | taste audit -> 5 blockers + 7 nice-to-haves fixed; FAIL attempt 1 (prompt flash in reveal); PASS attempt 2, landed on main |
+| 2026-06-11 | 11 | - | skipped: re-audit clean, no blocks-shippable findings remain |

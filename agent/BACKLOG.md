@@ -112,7 +112,7 @@ Acceptance criteria:
 - No-WebGL fallback copy and all museum overlay copy use plain punctuation (no em dashes); with WebGL disabled, `/` still shows the fallback with a working `/gallery` link and zero console errors
 - `pnpm build` green; keyboard, wheel, drag, and gaze focus regressions all pass
 
-## Sprint 10: Shippability taste pass (evaluator-driven) — pending
+## Sprint 10: Shippability taste pass (evaluator-driven) — done (2026-06-11, PASS attempt 2)
 
 Monte's feedback item 4: "ask the evaluator for taste and judgement and then do another pass or two on it to really be shippable." Process sprint: the generator FIRST runs the evaluator in curator taste audit mode (see RUBRIC "Curator taste audit") against the built site at both viewports — walking the room, every `?face=` wall, a story round trip — producing `agent/evals/<ts>-taste-audit.md` with screenshots and ranked findings. The generator then converts the top 3-5 findings into concrete, interaction-verifiable ACs appended under this sprint in this file, and only then builds.
 
@@ -134,13 +134,14 @@ Converted ACs (from agent/evals/20260611-085051-taste-audit.md findings 1-5, all
 
 Also being fixed this sprint (audit nice-to-haves 6-12, opportunistic, must not regress the ACs above): floor sheen gradient, crisp placard ink (unlit, larger type), brighter veil cell glow vs webbing, regrouped sparse walls and centered curator wall, no Esc chip on coarse pointers, real dark-to-light load fade, placard frame/subtitle toned to match.
 
-## Sprint 11: Second taste pass — pending (conditional)
+## Sprint 11: Second taste pass — skipped (2026-06-11)
 
-Run only if Sprint 10's re-audit still lists "blocks shippable" findings, or if Monte's next review asks for another pass. Same process as Sprint 10: fresh audit, convert top findings to ACs here, fix, re-audit clean. If Sprint 10's re-audit is clean and Monte signs off, mark this sprint skipped instead of building filler.
+Sprint 10's attempt-2 re-evaluation found zero remaining "blocks shippable" findings (agent/evals/20260611-094608-sprint-10-attempt2.md), so per this sprint's own rule it is marked skipped rather than building filler. Reopen if Monte's next review asks for another pass. Known open nice-to-haves, in priority order if reopened:
 
-Acceptance criteria:
-
-- (same standing structure as Sprint 10; converted ACs appended at sprint start)
+- Floor sheen still subtle: gloss-only luminance range ~16 vs the ≥20 target (seams retained)
+- Walls perfectly uniform, fusing at corners (no seam/AO shading)
+- Content quirk: the plato story's cover art has "THE SILENT SENATE" baked in while its placard reads its real title (story pipeline, not museum code)
+- Lint for em dashes in generated story prose (add to the story-from-history skill)
 
 ---
 
