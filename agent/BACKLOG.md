@@ -62,7 +62,7 @@ Acceptance criteria:
 - Screenshots of each wall show museum-at-night lighting: individual light pools on paintings against darker wall surfaces, tradition-colored label tint
 - Pipeline-proof: temporarily add a new story markdown + cover (copy an existing PNG), rebuild, and the story appears on its tradition wall and displaces the oldest acquisition on Wall 4; remove the temp files afterward and rebuild green
 
-## Sprint 6: Mobile movement, fallbacks, integration polish — pending
+## Sprint 6: Mobile movement, fallbacks, integration polish — done (2026-06-11, PASS)
 
 Touch control cluster, tap-to-focus/open, no-WebGL fallback, loading fade, end-to-end regression (SPEC 3.2, 9, 10).
 
@@ -73,6 +73,18 @@ Acceptance criteria:
 - With WebGL disabled (Playwright init script nulling `canvas.getContext` for webgl/webgl2), `/` shows a graceful fallback message with a working `/gallery` link and zero console errors
 - Initial load shows a loading state or fade-in, never a flash of black/untextured geometry; `data-loaded` flips to `"true"` and the room is fully textured in the post-load screenshot
 - Full keyboard journey at 1280px with zero console errors: spawn → turn → walk to the Rome wall → focus → Enter → cycle the carousel → Escape (position preserved) → walk to Wall 4 → open a New Acquisition
+
+## Sprint 7: Touch polish — pending (queued; awaiting Monte's test feedback before building)
+
+From the sprint 6 evaluator's whole-rubric sweep. Goal ACs are met; these are refinements.
+
+Acceptance criteria:
+
+- Hint overlay and focus prompt show touch-appropriate copy on coarse pointers (no "Arrow keys"/"Press Enter"/"Esc" on phones); hint auto-dismisses on first touch-control use
+- Hint overlay never overlaps the touch control cluster at 390px
+- Tap-to-focus respects a sane distance rule or deliberately documents remote-open as intended (decide and implement)
+- Carousel active dot updates immediately on keypress, not after smooth-scroll settle
+- No-WebGL fallback copy uses plain punctuation (repo convention)
 
 ---
 
