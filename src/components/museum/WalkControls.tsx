@@ -10,6 +10,15 @@ const TURN_SPEED = 100; // deg/s
 const SMOOTH = 0.15; // s to ~reach target velocity
 const CLAMP = ROOM.half - ROOM.margin;
 
+// Trackpad/wheel: scroll up walks forward, horizontal scroll turns (SPEC 3.3).
+const WHEEL_WALK = 0.012; // (units/s) per wheel delta unit
+const WHEEL_TURN = 0.4; // (deg/s) per wheel delta unit
+const WHEEL_DECAY = 0.25; // s, impulse decay time constant
+// Pointer drag: mouselook, drag right turns right, drag up pitches up.
+const DRAG_TURN = 0.25; // deg per px
+const DRAG_PITCH = 0.15; // deg per px
+const PITCH_LIMIT = 25; // deg
+
 export const CAMERA_KEY = "museum.camera.v1";
 
 // Once Enter-navigation saves the camera, residual velocity decay must not
@@ -76,16 +85,20 @@ const KEYMAP: Record<string, Action> = {
 
 export default function WalkControls() {
   const camera = useThree((s) => s.camera);
+  const gl = useThree((s) => s.gl);
   const keys = useRef<Set<Action>>(new Set());
   const pos = useRef({ x: DEFAULT_SPAWN.x, z: DEFAULT_SPAWN.z });
   const heading = useRef(DEFAULT_SPAWN.headingDeg);
+  const pitch = useRef(0);
   const vel = useRef({ walk: 0, turn: 0 });
+  const wheelVel = useRef({ walk: 0, turn: 0 });
+  const dragAccum = useRef({ heading: 0, pitch: 0 });
   const lastSave = useRef(0);
 
   const apply = useCallback(() => {
     camera.position.set(pos.current.x, ROOM.eye, pos.current.z);
     camera.rotation.set(
-      0,
+      THREE.MathUtils.degToRad(pitch.current),
       -THREE.MathUtils.degToRad(heading.current),
       0,
       "YXZ",
@@ -99,6 +112,7 @@ export default function WalkControls() {
         "data-heading",
         ((Math.round(norm * 10) / 10) % 360).toFixed(1),
       );
+      hud.setAttribute("data-pitch", pitch.current.toFixed(1));
     }
   }, [camera]);
 
@@ -108,6 +122,7 @@ export default function WalkControls() {
     const face = new URLSearchParams(window.location.search).get(
       "face",
     ) as WallId | null;
+    pitch.current = 0;
     if (face && face in FACE_HEADINGS) {
       // Eval/debug affordance: overrides any saved camera for this load.
       pos.current = { x: 0, z: 0 };
@@ -143,6 +158,59 @@ export default function WalkControls() {
     };
   }, [apply]);
 
+  // Wheel and pointer-drag input on the canvas element (SPEC 3.3).
+  useEffect(() => {
+    const el = gl.domElement;
+    const onWheel = (e: WheelEvent) => {
+      // The page must never scroll or pinch-zoom while over the room.
+      e.preventDefault();
+      wheelVel.current.walk = THREE.MathUtils.clamp(
+        wheelVel.current.walk - e.deltaY * WHEEL_WALK,
+        -WALK_SPEED,
+        WALK_SPEED,
+      );
+      wheelVel.current.turn = THREE.MathUtils.clamp(
+        wheelVel.current.turn + e.deltaX * WHEEL_TURN,
+        -TURN_SPEED,
+        TURN_SPEED,
+      );
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+
+    let dragging = false;
+    let pointerId = -1;
+    let lastX = 0;
+    let lastY = 0;
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      pointerId = e.pointerId;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!dragging || e.pointerId !== pointerId) return;
+      dragAccum.current.heading += (e.clientX - lastX) * DRAG_TURN;
+      dragAccum.current.pitch += (lastY - e.clientY) * DRAG_PITCH;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    };
+    const end = (e: PointerEvent) => {
+      if (e.pointerId === pointerId) dragging = false;
+    };
+    el.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+  }, [gl]);
+
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.1);
     const active = (a: Action) =>
@@ -154,25 +222,54 @@ export default function WalkControls() {
     const a = Math.min(1, dt / SMOOTH);
     vel.current.walk += (targetWalk - vel.current.walk) * a;
     vel.current.turn += (targetTurn - vel.current.turn) * a;
+    const drag = dragAccum.current;
     if (
       targetWalk === 0 &&
       targetTurn === 0 &&
       Math.abs(vel.current.walk) < 0.002 &&
-      Math.abs(vel.current.turn) < 0.05
+      Math.abs(vel.current.turn) < 0.05 &&
+      Math.abs(wheelVel.current.walk) < 0.002 &&
+      Math.abs(wheelVel.current.turn) < 0.05 &&
+      drag.heading === 0 &&
+      drag.pitch === 0
     ) {
       vel.current.walk = 0;
       vel.current.turn = 0;
+      wheelVel.current.walk = 0;
+      wheelVel.current.turn = 0;
       return;
     }
-    heading.current += vel.current.turn * dt;
+    // Inputs sum into one velocity; the keyboard speed caps the total.
+    const walk = THREE.MathUtils.clamp(
+      vel.current.walk + wheelVel.current.walk,
+      -WALK_SPEED,
+      WALK_SPEED,
+    );
+    const turn = THREE.MathUtils.clamp(
+      vel.current.turn + wheelVel.current.turn,
+      -TURN_SPEED,
+      TURN_SPEED,
+    );
+    const decay = Math.exp(-dt / WHEEL_DECAY);
+    wheelVel.current.walk *= decay;
+    wheelVel.current.turn *= decay;
+
+    heading.current += turn * dt + drag.heading;
+    pitch.current = THREE.MathUtils.clamp(
+      pitch.current + drag.pitch,
+      -PITCH_LIMIT,
+      PITCH_LIMIT,
+    );
+    drag.heading = 0;
+    drag.pitch = 0;
     const rad = THREE.MathUtils.degToRad(heading.current);
     pos.current.x = THREE.MathUtils.clamp(
-      pos.current.x + Math.sin(rad) * vel.current.walk * dt,
+      pos.current.x + Math.sin(rad) * walk * dt,
       -CLAMP,
       CLAMP,
     );
     pos.current.z = THREE.MathUtils.clamp(
-      pos.current.z - Math.cos(rad) * vel.current.walk * dt,
+      pos.current.z - Math.cos(rad) * walk * dt,
       -CLAMP,
       CLAMP,
     );

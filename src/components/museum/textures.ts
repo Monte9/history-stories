@@ -88,13 +88,14 @@ export function makePlacardTexture(): {
 
   ctx.fillStyle = "#4a4742";
   ctx.font = "44px Georgia, 'Times New Roman', serif";
-  ctx.fillText("↑ ↓  walk      ← →  turn", cx, 480);
-  ctx.fillText("Enter  ·  view a painting", cx, 590);
-  ctx.fillText("Esc  ·  step back", cx, 700);
+  ctx.fillText("↑ ↓ or scroll  ·  walk      ← →  ·  turn", cx, 460);
+  ctx.fillText("drag  ·  look around", cx, 550);
+  ctx.fillText("Enter  ·  view a painting", cx, 640);
+  ctx.fillText("Esc  ·  step back", cx, 730);
 
   ctx.fillStyle = "#8a867e";
   ctx.font = "italic 34px Georgia, 'Times New Roman', serif";
-  ctx.fillText("Rome · Ramayana · Mahabharata", cx, 800);
+  ctx.fillText("Rome · Ramayana · Mahabharata", cx, 815);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;

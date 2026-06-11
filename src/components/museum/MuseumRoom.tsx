@@ -67,8 +67,31 @@ function HintOverlay() {
   useEffect(() => {
     if (!show) return;
     const onKey = () => dismiss();
+    const onWheel = () => dismiss();
+    let downAt: { x: number; y: number } | null = null;
+    const onDown = (e: PointerEvent) => {
+      downAt = { x: e.clientX, y: e.clientY };
+    };
+    const onMove = (e: PointerEvent) => {
+      // A real drag (not a stray tap) counts as "got it, I can move".
+      if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5)
+        dismiss();
+    };
+    const onUp = () => {
+      downAt = null;
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("wheel", onWheel);
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
   }, [show, dismiss]);
 
   if (!show) return null;
@@ -78,10 +101,12 @@ function HintOverlay() {
       className="absolute bottom-8 left-1/2 z-10 flex max-w-[92vw] -translate-x-1/2 items-center gap-3 rounded-full border border-[var(--color-border)] bg-black/60 px-5 py-2.5 backdrop-blur"
     >
       <p className="text-xs text-[var(--color-text-muted)] sm:text-sm">
-        <span className="text-[var(--color-text)]">Arrow keys</span> to walk
-        and turn · <span className="text-[var(--color-text)]">Enter</span> to
-        view a painting ·{" "}
-        <span className="text-[var(--color-text)]">Esc</span> to step back
+        <span className="text-[var(--color-text)]">Arrow keys</span> or{" "}
+        <span className="text-[var(--color-text)]">scroll</span> to walk ·{" "}
+        <span className="text-[var(--color-text)]">drag</span> to look around ·{" "}
+        <span className="text-[var(--color-text)]">Enter</span> to view a
+        painting · <span className="text-[var(--color-text)]">Esc</span> to
+        step back
       </p>
       <button
         onClick={dismiss}
@@ -178,8 +203,9 @@ function CuratorPlacard() {
   );
 }
 
-const FOCUS_DISTANCE = 3.0;
-const FOCUS_HALF_ANGLE = 35;
+// Gaze focus (SPEC 4.1): whatever you point at focuses, no distance gate.
+const FOCUS_AZ_GATE = 12; // deg off view center
+const FOCUS_ELEV_WEIGHT = 0.5;
 
 function FocusManager({
   hungs,
@@ -208,21 +234,31 @@ function FocusManager({
       tapAnchor.current = null;
     }
     const heading = -THREE.MathUtils.radToDeg(camera.rotation.y);
+    const pitchDeg = THREE.MathUtils.radToDeg(camera.rotation.x);
     let best = "";
     let bestTitle = "";
-    let bestAngle = Infinity;
+    let bestScore = Infinity;
+    let bestDist = Infinity;
     for (const h of hungs) {
       const dx = h.position[0] - cx;
       const dz = h.position[2] - cz;
       const dist = Math.hypot(dx, dz);
-      if (dist >= FOCUS_DISTANCE) continue;
       const dirAngle = THREE.MathUtils.radToDeg(Math.atan2(dx, -dz));
-      const diff = Math.abs(
+      const azDiff = Math.abs(
         ((dirAngle - heading) % 360 + 540) % 360 - 180,
       );
-      if (diff > FOCUS_HALF_ANGLE) continue;
-      if (diff < bestAngle) {
-        bestAngle = diff;
+      if (azDiff > FOCUS_AZ_GATE) continue;
+      const elevAngle = THREE.MathUtils.radToDeg(
+        Math.atan2(h.position[1] - ROOM.eye, dist),
+      );
+      const elevDiff = Math.abs(elevAngle - pitchDeg);
+      const score = azDiff + FOCUS_ELEV_WEIGHT * elevDiff;
+      if (
+        score < bestScore - 1e-3 ||
+        (Math.abs(score - bestScore) <= 1e-3 && dist < bestDist)
+      ) {
+        bestScore = score;
+        bestDist = dist;
         best = h.story.slug;
         bestTitle = h.story.title;
       }
@@ -472,6 +508,7 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         data-x=""
         data-z=""
         data-heading=""
+        data-pitch=""
         data-wall-roman=""
         data-wall-ramayana=""
         data-wall-mahabharata=""
@@ -517,7 +554,7 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
           className="truncate text-sm font-medium text-[var(--color-text)]"
         />
         <span className="shrink-0 text-sm text-[var(--color-text-muted)]">
-          — Press <span className="text-[var(--color-accent)]">Enter</span> to
+          · Press <span className="text-[var(--color-accent)]">Enter</span> to
           view
         </span>
       </div>

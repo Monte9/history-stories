@@ -75,6 +75,8 @@ export default function Painting({
       rotation={[0, rotationY, 0]}
       onClick={(e) => {
         e.stopPropagation();
+        // A drag that ends on a painting is a look, not a tap.
+        if (e.delta > 5) return;
         // First tap focuses; tapping the focused painting opens it.
         const focused = document
           .getElementById("museum-hud")
