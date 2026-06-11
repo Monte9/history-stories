@@ -24,10 +24,10 @@ function buildPanels(covers: string[], title: string): Panel[] {
     kind: covers[i] ? "full" : kind,
     alt:
       kind === "full" || covers[i]
-        ? `${title} — cover ${i + 1}`
+        ? `${title}, cover ${i + 1}`
         : kind === "detail"
-          ? `${title} — detail view`
-          : `${title} — archival plate`,
+          ? `${title}, detail view`
+          : `${title}, archival plate`,
   }));
 }
 
@@ -93,11 +93,15 @@ export default function CoverCarousel({
   const panels = buildPanels(covers, title);
   const stripRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
+  // While a smooth scroll we started is in flight, scroll events must not
+  // drag the active dot back to the panel being left.
+  const scrollTarget = useRef<number | null>(null);
 
   const goTo = useCallback((i: number) => {
     const strip = stripRef.current;
     if (!strip) return;
     const n = (i + 3) % 3;
+    scrollTarget.current = n;
     strip.scrollTo({ left: n * strip.clientWidth, behavior: "smooth" });
     setIndex(n);
   }, []);
@@ -121,8 +125,20 @@ export default function CoverCarousel({
   const onScroll = useCallback(() => {
     const strip = stripRef.current;
     if (!strip || strip.clientWidth === 0) return;
-    const i = Math.round(strip.scrollLeft / strip.clientWidth);
-    setIndex(Math.max(0, Math.min(2, i)));
+    const i = Math.max(
+      0,
+      Math.min(2, Math.round(strip.scrollLeft / strip.clientWidth)),
+    );
+    if (scrollTarget.current !== null) {
+      if (i === scrollTarget.current) scrollTarget.current = null;
+      return;
+    }
+    setIndex(i);
+  }, []);
+
+  // A touch on the strip takes over from any in-flight programmatic scroll.
+  const onPointerDown = useCallback(() => {
+    scrollTarget.current = null;
   }, []);
 
   return (
@@ -130,6 +146,7 @@ export default function CoverCarousel({
       <div
         ref={stripRef}
         onScroll={onScroll}
+        onPointerDown={onPointerDown}
         data-carousel
         className="flex h-[50vh] min-h-[260px] snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >

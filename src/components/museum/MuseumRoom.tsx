@@ -46,7 +46,7 @@ function setHud(attrs: Record<string, string>) {
 
 const HINT_KEY = "museum.hintSeen.v1";
 
-function HintOverlay() {
+function HintOverlay({ coarse }: { coarse: boolean }) {
   const [show, setShow] = useState(false);
 
   const dismiss = useCallback(() => {
@@ -70,6 +70,14 @@ function HintOverlay() {
     const onWheel = () => dismiss();
     let downAt: { x: number; y: number } | null = null;
     const onDown = (e: PointerEvent) => {
+      // Pressing the on-screen movement cluster counts as "got it" too.
+      if (
+        e.target instanceof Element &&
+        e.target.closest("#museum-touch-controls")
+      ) {
+        dismiss();
+        return;
+      }
       downAt = { x: e.clientX, y: e.clientY };
     };
     const onMove = (e: PointerEvent) => {
@@ -98,15 +106,27 @@ function HintOverlay() {
   return (
     <div
       id="museum-hint"
-      className="absolute bottom-8 left-1/2 z-10 flex max-w-[92vw] -translate-x-1/2 items-center gap-3 rounded-full border border-[var(--color-border)] bg-black/60 px-5 py-2.5 backdrop-blur"
+      className="absolute bottom-40 left-1/2 z-10 flex max-w-[92vw] -translate-x-1/2 items-center gap-3 rounded-full border border-[var(--color-border)] bg-black/60 px-5 py-2.5 backdrop-blur sm:bottom-8"
     >
       <p className="text-xs text-[var(--color-text-muted)] sm:text-sm">
-        <span className="text-[var(--color-text)]">Arrow keys</span> or{" "}
-        <span className="text-[var(--color-text)]">scroll</span> to walk ·{" "}
-        <span className="text-[var(--color-text)]">drag</span> to look around ·{" "}
-        <span className="text-[var(--color-text)]">Enter</span> to view a
-        painting · <span className="text-[var(--color-text)]">Esc</span> to
-        step back
+        {coarse ? (
+          <>
+            <span className="text-[var(--color-text)]">Hold the controls</span>{" "}
+            to move · <span className="text-[var(--color-text)]">drag</span> to
+            look around ·{" "}
+            <span className="text-[var(--color-text)]">tap a painting</span> to
+            view it, tap again to open
+          </>
+        ) : (
+          <>
+            <span className="text-[var(--color-text)]">Arrow keys</span> or{" "}
+            <span className="text-[var(--color-text)]">scroll</span> to walk ·{" "}
+            <span className="text-[var(--color-text)]">drag</span> to look
+            around · <span className="text-[var(--color-text)]">Enter</span> to
+            view a painting ·{" "}
+            <span className="text-[var(--color-text)]">Esc</span> to step back
+          </>
+        )}
       </p>
       <button
         onClick={dismiss}
@@ -429,10 +449,12 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
   const [loaded, setLoaded] = useState(false);
   // null = not probed yet (SSR-safe); the probe runs before mounting the canvas.
   const [glOk, setGlOk] = useState<boolean | null>(null);
+  const [coarse, setCoarse] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     setGlOk(webglAvailable());
+    setCoarse(window.matchMedia("(pointer: coarse)").matches);
   }, []);
 
   const openStory = useCallback(
@@ -482,7 +504,7 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
             This room needs WebGL, which your browser has turned off.
           </p>
           <p className="mb-6 text-sm text-[var(--color-text-muted)]">
-            The collection is still open — browse every story in the flat
+            The collection is still open. Browse every story in the flat
             gallery instead.
           </p>
           <a
@@ -541,7 +563,7 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
           <Paintings stories={stories} onLoaded={() => setLoaded(true)} />
         </Suspense>
       </Canvas>
-      {loaded && <HintOverlay />}
+      {loaded && <HintOverlay coarse={coarse} />}
       {loaded && <TouchControls />}
       <div
         id="museum-prompt"
@@ -560,8 +582,16 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
           className="truncate text-sm font-medium text-[var(--color-text)]"
         />
         <span className="shrink-0 text-sm text-[var(--color-text-muted)]">
-          · Press <span className="text-[var(--color-accent)]">Enter</span> to
-          view
+          {coarse ? (
+            <>
+              · <span className="text-[var(--color-accent)]">Tap</span> to view
+            </>
+          ) : (
+            <>
+              · Press <span className="text-[var(--color-accent)]">Enter</span>{" "}
+              to view
+            </>
+          )}
         </span>
       </div>
       <div
