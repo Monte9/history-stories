@@ -17,6 +17,12 @@ const TIMEOUT_MS = 6000; // 3 missed heartbeats = gone
 const ENTER_MS = 400;
 const LEAVE_MS = 400;
 const TELEPORT_JUMP = 3; // units; larger jumps relocate, never glide
+
+// Identity memory survives room remounts (story round trips) and same-id
+// rejoins, so a friend never gets renumbered mid-session (taste audit 2,
+// finding 4). A full page load starts a fresh JS context and fresh numbers.
+const identityMemory = new Map<string, string>();
+let nextVisitorNumber = 2; // you are implicitly Visitor 1, unlabeled
 const RENDER_CAP = 8; // SPEC 12.3: render at most 8 remote avatars
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -44,7 +50,6 @@ export class PresenceClient {
   readonly peers = new Map<string, Peer>();
   private transport: RawTransport;
   private hud: HTMLElement;
-  private nextVisitor = 2; // you are implicitly Visitor 1, unlabeled
   private lastSent: PeerState | null = null;
   private lastSentAt = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -152,7 +157,11 @@ export class PresenceClient {
     const now = performance.now();
     let peer = this.peers.get(from);
     if (!peer) {
-      const label = `Visitor ${this.nextVisitor++}`;
+      let label = identityMemory.get(from);
+      if (!label) {
+        label = `Visitor ${nextVisitorNumber++}`;
+        identityMemory.set(from, label);
+      }
       const color = hashColor(from);
       let rendered = 0;
       for (const p of this.peers.values()) {

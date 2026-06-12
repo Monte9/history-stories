@@ -11,11 +11,16 @@ import { playerStore } from "./playerStore";
 // data-cam-mode / data-cam-dist to the HUD.
 
 const BOOM_DEFAULT = 3.5;
-const BOOM_MIN = 0.7;
+// Geometry always wins over any preferred minimum: a camera forced past the
+// wall inset blacks out the frame (taste audit 2 finding 1).
+const BOOM_HARD_MIN = 0.2;
 const CAM_INSET = 0.35;
 const CAM_HEIGHT = 2.5;
 const LOOK_HEIGHT = 1.6;
-const FADE_BELOW = 1.3; // body fades when the boom is shorter than this
+// Body fade vs boom: fully visible above FADE_START, gone below FADE_END,
+// so a wall-pinned camera never frames your own half-faded back (finding 2).
+const FADE_START = 1.8;
+const FADE_END = 1.2;
 
 const look = new THREE.Vector3();
 
@@ -50,19 +55,24 @@ export default function CameraRig() {
     const bx = -Math.sin(rad);
     const bz = Math.cos(rad);
 
-    // Shorten the boom so the camera stays inside the room inset.
+    // Geometric maximum for the CURRENT heading: the camera stays inside
+    // the room inset no matter what.
     const limit = ROOM.half - CAM_INSET;
-    let boom = BOOM_DEFAULT;
+    let boomGeo = BOOM_DEFAULT;
     for (const [pos, dir] of [
       [p.x, bx],
       [p.z, bz],
     ] as const) {
-      if (dir > 1e-6) boom = Math.min(boom, (limit - pos) / dir);
-      else if (dir < -1e-6) boom = Math.min(boom, (-limit - pos) / dir);
+      if (dir > 1e-6) boomGeo = Math.min(boomGeo, (limit - pos) / dir);
+      else if (dir < -1e-6) boomGeo = Math.min(boomGeo, (-limit - pos) / dir);
     }
-    boom = THREE.MathUtils.clamp(boom, BOOM_MIN, BOOM_DEFAULT);
-    // Light smoothing for feel; snaps are jarring on wall contact.
-    boomSmoothed.current += (boom - boomSmoothed.current) * 0.25;
+    boomGeo = Math.max(boomGeo, BOOM_HARD_MIN);
+    // Extend smoothly, shorten instantly: smoothing lag during a fast turn
+    // near a wall is exactly how the camera used to clip through geometry.
+    boomSmoothed.current = Math.min(
+      boomSmoothed.current + (boomGeo - boomSmoothed.current) * 0.25,
+      boomGeo,
+    );
     const b = boomSmoothed.current;
     p.boom = b;
 
@@ -86,5 +96,5 @@ export default function CameraRig() {
 export function localBodyOpacity(): number {
   const p = playerStore;
   if (p.camMode === "first") return 0;
-  return THREE.MathUtils.clamp((p.boom - BOOM_MIN) / (FADE_BELOW - BOOM_MIN), 0, 1);
+  return THREE.MathUtils.clamp((p.boom - FADE_END) / (FADE_START - FADE_END), 0, 1);
 }

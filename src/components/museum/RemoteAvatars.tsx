@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import AvatarBody, { type AvatarPose } from "./AvatarBody";
 import { makeTextTexture } from "./textures";
@@ -16,6 +16,14 @@ const ENTER_MS = 400;
 const LEAVE_MS = 400;
 const TELEPORT_HOLD_MS = 200; // invisible right after a snap...
 const TELEPORT_FADE_MS = 300; // ...then fades back in at the new spot
+
+const LABEL_Y = 2.12;
+const LABEL_H_MAX = 0.3;
+// Labels shrink with proximity and vanish point-blank, so a buddy walking
+// beside you never wears a billboard across the frame (taste audit 2, #3).
+const LABEL_H_PER_U = 0.09;
+const LABEL_FADE_NEAR = 1.0; // fully gone at this camera distance...
+const LABEL_FADE_FULL = 1.5; // ...fully visible beyond this
 
 const noRaycast = () => null;
 
@@ -38,6 +46,15 @@ function lifecycleOpacity(peer: Peer, now: number): number {
   return o;
 }
 
+interface LabelEntry {
+  peer: Peer;
+  sprite: THREE.Sprite;
+  mat: THREE.SpriteMaterial;
+  aspect: number;
+}
+
+type LabelRegistry = Map<string, LabelEntry>;
+
 function RemotePeer({ peer }: { peer: Peer }) {
   const pose = useRef<AvatarPose>({
     x: peer.latest.s.x,
@@ -52,31 +69,6 @@ function RemotePeer({ peer }: { peer: Peer }) {
     h: peer.latest.s.h,
     t: 0,
   });
-  const spriteRef = useRef<THREE.Sprite>(null);
-
-  const label = useMemo(
-    () =>
-      makeTextTexture(peer.label, {
-        color: "#2b2b2b",
-        fontPx: 72,
-        weight: "500",
-        letterSpacing: 0.06,
-        background: "#fbfaf7",
-        border: peer.color,
-      }),
-    [peer.label, peer.color],
-  );
-
-  const spriteMat = useMemo(
-    () =>
-      new THREE.SpriteMaterial({
-        map: label.texture,
-        transparent: true,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    [label],
-  );
 
   // Gait is driven by rendered displacement, not the transmitted speed, so
   // remote legs move exactly when the remote body moves (SPEC 12.3).
@@ -103,33 +95,121 @@ function RemotePeer({ peer }: { peer: Peer }) {
 
   const getOpacity = () => lifecycleOpacity(peer, performance.now());
 
-  useFrame(() => {
-    const s = spriteRef.current;
-    if (!s) return;
-    const p = pose.current;
-    s.position.set(p.x, 2.12, p.z);
-    const o = getOpacity();
-    spriteMat.opacity = o;
-    s.visible = o > 0.02;
-  });
+  return <AvatarBody getPose={getPose} tint={peer.color} getOpacity={getOpacity} />;
+}
 
-  const h = 0.3;
-  return (
-    <group>
-      <AvatarBody getPose={getPose} tint={peer.color} getOpacity={getOpacity} />
-      <sprite
-        ref={spriteRef}
-        material={spriteMat}
-        scale={[h * label.aspect, h, 1]}
-        raycast={noRaycast}
-      />
-    </group>
+function PeerLabel({
+  peer,
+  registry,
+}: {
+  peer: Peer;
+  registry: LabelRegistry;
+}) {
+  const spriteRef = useRef<THREE.Sprite>(null);
+
+  const label = useMemo(
+    () =>
+      makeTextTexture(peer.label, {
+        color: "#2b2b2b",
+        fontPx: 72,
+        weight: "500",
+        letterSpacing: 0.06,
+        background: "#fbfaf7",
+        border: peer.color,
+      }),
+    [peer.label, peer.color],
   );
+
+  const mat = useMemo(
+    () =>
+      new THREE.SpriteMaterial({
+        map: label.texture,
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    [label],
+  );
+
+  useEffect(() => {
+    const sprite = spriteRef.current;
+    if (!sprite) return;
+    registry.set(peer.id, { peer, sprite, mat, aspect: label.aspect });
+    return () => {
+      registry.delete(peer.id);
+    };
+  }, [peer, registry, mat, label.aspect]);
+
+  return (
+    <sprite
+      ref={spriteRef}
+      material={mat}
+      scale={[LABEL_H_MAX * label.aspect, LABEL_H_MAX, 1]}
+      raycast={noRaycast}
+    />
+  );
+}
+
+const ndc = new THREE.Vector3();
+
+// One pass for every label: distance-aware scale, near fade, and
+// screen-space overlap suppression (nearer label wins; the farther one is
+// hidden entirely rather than smearing into it — taste audit 2, #5).
+function LabelManager({ registry }: { registry: LabelRegistry }) {
+  const camera = useThree((s) => s.camera);
+
+  useFrame(() => {
+    const now = performance.now();
+    const cam = camera as THREE.PerspectiveCamera;
+    const tanHalf = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+    const entries = [...registry.values()].map((e) => {
+      const pose = interpolate(e.peer, now);
+      const d = Math.hypot(
+        pose.x - cam.position.x,
+        LABEL_Y - cam.position.y,
+        pose.z - cam.position.z,
+      );
+      return { ...e, pose, d };
+    });
+    entries.sort((a, b) => a.d - b.d);
+    const kept: { x: number; y: number; hw: number; hh: number }[] = [];
+    for (const e of entries) {
+      const { sprite, mat, peer, pose, d, aspect } = e;
+      const h = Math.min(LABEL_H_MAX, LABEL_H_PER_U * d);
+      sprite.position.set(pose.x, LABEL_Y, pose.z);
+      sprite.scale.set(h * aspect, h, 1);
+      let o =
+        lifecycleOpacity(peer, now) *
+        THREE.MathUtils.clamp(
+          (d - LABEL_FADE_NEAR) / (LABEL_FADE_FULL - LABEL_FADE_NEAR),
+          0,
+          1,
+        );
+      if (o > 0.02) {
+        ndc.set(pose.x, LABEL_Y, pose.z).project(cam);
+        if (ndc.z < 1 && Math.abs(ndc.x) < 1.3 && Math.abs(ndc.y) < 1.3) {
+          const hh = h / 2 / (d * tanHalf);
+          const hw = (h * aspect) / 2 / (d * tanHalf * cam.aspect);
+          const overlaps = kept.some(
+            (r) =>
+              Math.abs(ndc.x - r.x) < hw + r.hw &&
+              Math.abs(ndc.y - r.y) < hh + r.hh,
+          );
+          if (overlaps) o = 0;
+          else kept.push({ x: ndc.x, y: ndc.y, hw, hh });
+        }
+      }
+      mat.opacity = o;
+      sprite.visible = o > 0.02;
+    }
+  });
+  return null;
 }
 
 export default function RemoteAvatars() {
   const [ids, setIds] = useState<string[]>([]);
   const lastSync = useRef(0);
+  const registry = useMemo<LabelRegistry>(() => new Map(), []);
 
   useFrame(() => {
     const now = performance.now();
@@ -154,8 +234,14 @@ export default function RemoteAvatars() {
     <>
       {ids.map((id) => {
         const peer = client.peers.get(id);
-        return peer ? <RemotePeer key={id} peer={peer} /> : null;
+        return peer ? (
+          <group key={id}>
+            <RemotePeer peer={peer} />
+            <PeerLabel peer={peer} registry={registry} />
+          </group>
+        ) : null;
       })}
+      <LabelManager registry={registry} />
     </>
   );
 }
