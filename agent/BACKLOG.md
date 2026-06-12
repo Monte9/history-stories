@@ -211,6 +211,14 @@ Draft acceptance criteria (alignment pending):
 - A post-fix re-audit in `agent/evals/` shows zero remaining "blocks shippable" findings
 - No regressions: sprint 12 third-person journey, sprint 13-15 two-page presence flows, solo keyboard journey, HUD contract, `pnpm build` green
 
+Converted ACs (from agent/evals/20260612-021952-taste-audit-2.md, recorded before fix code; findings 1-4 "blocks shippable", 5 included):
+
+1. **Camera never leaves the room or enters geometry during turns** (audit 1): pinned at any wall, a held 360 deg turn yields no frame below 60% of open-floor mean luminance and no through-wall/inside-geometry view; `data-cam-dist` matches the rendered camera distance within 0.3 u at every sample
+2. **Your own body never owns the frame at a wall** (audit 2): standing within 1.5 u of a wall facing into the room, the local body occludes <= ~15% of the frame, and a peer 8+ u away on the sight line is visible in the screenshot
+3. **Labels never balloon** (audit 3): at peer distance 1-2.5 u the label pill occupies <= ~15% of frame width (or the label fades out inside 1.5 u); labels remain readable at 15+ u (current far behavior preserved)
+4. **Identity is stable across rejoins** (audit 4): a friend doing Enter -> story -> Escape re-materializes with the SAME label and color on the observer's side, never a duplicate node; a same-id leave/rejoin within a session is never renumbered
+5. **Labels never pile up** (audit 5): in a 4-peer cluster, every rendered label is fully readable or suppressed entirely; label sprites never visibly intersect each other in screenshots
+
 ---
 
 ## Superseded: original Sprint 7 (marked 2026-06-11)
