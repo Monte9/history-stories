@@ -17,6 +17,7 @@ const TIMEOUT_MS = 6000; // 3 missed heartbeats = gone
 const ENTER_MS = 400;
 const LEAVE_MS = 400;
 const TELEPORT_JUMP = 3; // units; larger jumps relocate, never glide
+const RENDER_CAP = 8; // SPEC 12.3: render at most 8 remote avatars
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function selfState(): PeerState {
@@ -64,6 +65,24 @@ export class PresenceClient {
     this.timer = setInterval(() => this.tick(), TICK_MS);
   }
 
+  // Promote tracked-but-unrendered peers (join order) into freed slots,
+  // staged like a fresh arrival so promotion never pops.
+  private fillRenderSlots(now: number) {
+    let rendered = 0;
+    for (const peer of this.peers.values()) {
+      if (peer.rendered && peer.state !== "leaving") rendered++;
+    }
+    for (const peer of this.peers.values()) {
+      if (rendered >= RENDER_CAP) break;
+      if (peer.rendered || peer.state === "leaving") continue;
+      peer.rendered = true;
+      peer.state = "entering";
+      peer.enteredAt = now;
+      peer.node = this.makeNode(peer.id, peer.label, peer.color);
+      rendered++;
+    }
+  }
+
   private tick() {
     const now = performance.now();
     // Send: on change at 10 Hz, else heartbeat every 2 s.
@@ -78,7 +97,8 @@ export class PresenceClient {
       this.lastSentAt = now;
     }
     // Lifecycle sweep + DOM mirror.
-    let count = 0;
+    let renderedCount = 0;
+    let total = 0;
     for (const peer of this.peers.values()) {
       if (peer.state === "entering" && now - peer.enteredAt >= ENTER_MS) {
         peer.state = "live";
@@ -88,13 +108,17 @@ export class PresenceClient {
         peer.leavingAt = now;
       }
       if (peer.state === "leaving" && now - peer.leavingAt >= LEAVE_MS) {
-        peer.node.remove();
+        peer.node?.remove();
         this.peers.delete(peer.id);
         continue;
       }
       // Leaving peers keep their node for the fade but stop counting, so a
       // reload (bye + instant rejoin) never overcounts one human.
-      if (peer.state !== "leaving") count++;
+      if (peer.state !== "leaving") {
+        total++;
+        if (peer.rendered) renderedCount++;
+      }
+      if (!peer.node) continue;
       const pose = interpolate(peer, now);
       const n = peer.node;
       n.setAttribute("data-peer-x", pose.x.toFixed(2));
@@ -105,34 +129,49 @@ export class PresenceClient {
       );
       n.setAttribute("data-peer-state", peer.state);
     }
-    this.hud.setAttribute("data-peers", String(count));
+    if (renderedCount < RENDER_CAP && total > renderedCount) {
+      this.fillRenderSlots(now);
+      renderedCount = Math.min(total, RENDER_CAP);
+    }
+    this.hud.setAttribute("data-peers", String(renderedCount));
+    this.hud.setAttribute("data-peers-total", String(total));
+  }
+
+  private makeNode(id: string, label: string, color: string): HTMLElement {
+    const node = document.createElement("div");
+    node.className = "museum-peer";
+    node.setAttribute("data-peer-id", id);
+    node.setAttribute("data-peer-label", label);
+    node.setAttribute("data-peer-color", color);
+    node.setAttribute("data-peer-state", "entering");
+    this.hud.appendChild(node);
+    return node;
   }
 
   private onState(from: string, s: PeerState) {
     const now = performance.now();
     let peer = this.peers.get(from);
     if (!peer) {
-      const node = document.createElement("div");
-      node.className = "museum-peer";
-      node.setAttribute("data-peer-id", from);
       const label = `Visitor ${this.nextVisitor++}`;
       const color = hashColor(from);
-      node.setAttribute("data-peer-label", label);
-      node.setAttribute("data-peer-color", color);
-      node.setAttribute("data-peer-state", "entering");
-      this.hud.appendChild(node);
+      let rendered = 0;
+      for (const p of this.peers.values()) {
+        if (p.rendered && p.state !== "leaving") rendered++;
+      }
+      const renderNow = rendered < RENDER_CAP;
       peer = {
         id: from,
         label,
         color,
         state: "entering",
+        rendered: renderNow,
         enteredAt: now,
         leavingAt: 0,
         teleportAt: 0,
         lastAt: now,
         prev: null,
         latest: { s, at: now },
-        node,
+        node: renderNow ? this.makeNode(from, label, color) : null,
       };
       this.peers.set(from, peer);
       return;
@@ -184,7 +223,7 @@ export class PresenceClient {
   stop() {
     this.bye();
     if (this.timer) clearInterval(this.timer);
-    for (const peer of this.peers.values()) peer.node.remove();
+    for (const peer of this.peers.values()) peer.node?.remove();
     this.peers.clear();
     this.hud.setAttribute("data-peers", "0");
     this.transport.close();

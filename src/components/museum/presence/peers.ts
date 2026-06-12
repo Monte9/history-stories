@@ -41,13 +41,16 @@ export interface Peer {
   label: string;
   color: string;
   state: PeerLifecycle;
+  // Render cap (SPEC 12.3): at most 8 peers are rendered (body + DOM node);
+  // the rest are tracked and promoted when a rendered slot frees up.
+  rendered: boolean;
   enteredAt: number;
   leavingAt: number; // 0 until leaving
   teleportAt: number; // 0, or when a >3 u jump snapped this peer
   lastAt: number;
   prev: Sample | null;
   latest: Sample;
-  node: HTMLElement;
+  node: HTMLElement | null; // exists only while rendered
 }
 
 function shortestArcLerp(a: number, b: number, t: number): number {

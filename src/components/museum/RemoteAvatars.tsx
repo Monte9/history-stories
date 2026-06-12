@@ -16,7 +16,6 @@ const ENTER_MS = 400;
 const LEAVE_MS = 400;
 const TELEPORT_HOLD_MS = 200; // invisible right after a snap...
 const TELEPORT_FADE_MS = 300; // ...then fades back in at the new spot
-const MAX_RENDERED = 8;
 
 const noRaycast = () => null;
 
@@ -137,8 +136,10 @@ export default function RemoteAvatars() {
     if (now - lastSync.current < 250) return;
     lastSync.current = now;
     const client = presenceStore.client;
+    // The protocol layer owns the render cap; bodies exist only for
+    // peers it marked rendered.
     const current = client
-      ? [...client.peers.keys()].slice(0, MAX_RENDERED)
+      ? [...client.peers.values()].filter((p) => p.rendered).map((p) => p.id)
       : [];
     setIds((prev) =>
       prev.length === current.length && prev.every((id, i) => id === current[i])

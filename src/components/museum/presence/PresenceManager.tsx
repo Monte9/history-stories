@@ -2,17 +2,32 @@
 
 import { useEffect } from "react";
 import type { PresenceClient } from "./client";
-import { presenceStore } from "./presenceStore";
+import { presenceStore, resolveNetMode } from "./presenceStore";
 
 // Mounts presence after the room has loaded (SPEC 12.2): ?net=off loads
 // nothing, ?net=local uses the BroadcastChannel reference transport, the
 // default lazy-imports the webrtc chunk and degrades silently to off.
 export default function PresenceManager({ loaded }: { loaded: boolean }) {
+  // Resolve (and consume the round-trip flag) once at mount: openStory
+  // needs the mode before the room finishes loading, and consuming any
+  // later would eat a flag openStory just wrote for the next trip.
+  useEffect(() => {
+    presenceStore.mode = resolveNetMode();
+    if (presenceStore.mode === "off") {
+      document
+        .getElementById("museum-hud")
+        ?.setAttribute("data-net", "off");
+    }
+    return () => {
+      presenceStore.mode = null;
+    };
+  }, []);
+
   useEffect(() => {
     if (!loaded) return;
     const hud = document.getElementById("museum-hud");
     if (!hud) return;
-    const mode = new URLSearchParams(window.location.search).get("net");
+    const mode = presenceStore.mode ?? resolveNetMode();
     if (mode === "off") {
       hud.setAttribute("data-net", "off");
       return;

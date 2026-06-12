@@ -29,6 +29,7 @@ import {
 } from "./playerStore";
 import { focusStore } from "./focusStore";
 import PresenceManager from "./presence/PresenceManager";
+import { presenceStore } from "./presence/presenceStore";
 import RemoteAvatars from "./RemoteAvatars";
 import {
   makeFloorTexture,
@@ -480,23 +481,31 @@ function TouchControls() {
 // with company. Counts you plus rendered peers, driven by the HUD attr.
 function PresenceChip() {
   const [peers, setPeers] = useState(0);
+  const [total, setTotal] = useState(0);
   useEffect(() => {
     const hud = document.getElementById("museum-hud");
     if (!hud) return;
-    const read = () =>
+    const read = () => {
       setPeers(parseInt(hud.getAttribute("data-peers") || "0", 10) || 0);
+      setTotal(parseInt(hud.getAttribute("data-peers-total") || "0", 10) || 0);
+    };
     read();
     const mo = new MutationObserver(read);
-    mo.observe(hud, { attributes: true, attributeFilter: ["data-peers"] });
+    mo.observe(hud, {
+      attributes: true,
+      attributeFilter: ["data-peers", "data-peers-total"],
+    });
     return () => mo.disconnect();
   }, []);
   if (peers < 1) return null;
+  // Counts everyone tracked (you included), not just rendered bodies, so
+  // the chip never understates a crowded room.
   return (
     <div
       id="museum-presence-count"
-      className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full border border-[var(--color-border)] bg-black/70 px-3.5 py-1.5 text-xs text-[var(--color-text)] backdrop-blur sm:top-5 sm:text-sm"
+      className="absolute top-16 left-4 z-10 rounded-full border border-[var(--color-border)] bg-black/70 px-3.5 py-1.5 text-xs text-[var(--color-text)] backdrop-blur sm:top-5 sm:left-1/2 sm:-translate-x-1/2 sm:text-sm"
     >
-      {peers + 1} in the room
+      {Math.max(total, peers) + 1} in the room
     </div>
   );
 }
@@ -562,6 +571,16 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         saveCamera(x, z, heading);
         lockSaves();
       }
+      // One-shot return flags: the story round trip (and only it) inherits
+      // this session's resolved transport and camera mode (sprint 15 AC1-2).
+      try {
+        const net =
+          presenceStore.mode || hud?.getAttribute("data-net") || "";
+        if (net === "local" || net === "off" || net === "webrtc") {
+          sessionStorage.setItem("museum.netReturn.v1", net);
+        }
+        sessionStorage.setItem("museum.camReturn.v1", playerStore.camMode);
+      } catch {}
       router.push(`/${slug}`);
     },
     [router],
@@ -633,6 +652,7 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         data-pitch=""
         data-net=""
         data-peers="0"
+        data-peers-total="0"
         data-wall-roman=""
         data-wall-ramayana=""
         data-wall-mahabharata=""
