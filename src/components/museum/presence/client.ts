@@ -2,7 +2,10 @@
 
 import { playerStore } from "../playerStore";
 import { createLocalTransport } from "./local";
+import { hashColor, interpolate, type Peer } from "./peers";
 import type { PeerState, RawTransport } from "./types";
+
+export { interpolate, PEER_PALETTE, type Peer, type PeerLifecycle } from "./peers";
 
 // Protocol layer (SPEC 12.3-12.6): tick + heartbeat sending, peer registry
 // with entering/live/leaving lifecycle, heartbeat timeout, interpolated
@@ -13,74 +16,7 @@ const HEARTBEAT_MS = 2000;
 const TIMEOUT_MS = 6000; // 3 missed heartbeats = gone
 const ENTER_MS = 400;
 const LEAVE_MS = 400;
-const INTERP_DELAY_MS = 150;
-const EXTRAPOLATE_MAX_MS = 250;
-
-// 8 muted, white-wall-legible tints (SPEC 12.4).
-export const PEER_PALETTE = [
-  "#b85c38", // terracotta
-  "#2d7d72", // teal
-  "#4f5d9e", // indigo
-  "#b08b2e", // ochre
-  "#8e4f79", // plum
-  "#6b7f3a", // moss
-  "#5b7793", // slate
-  "#b06161", // rose
-];
-
-function hashColor(id: string): string {
-  let h = 5381;
-  for (let i = 0; i < id.length; i++) h = (h * 33) ^ id.charCodeAt(i);
-  return PEER_PALETTE[Math.abs(h) % PEER_PALETTE.length];
-}
-
-interface Sample {
-  s: PeerState;
-  at: number;
-}
-
-export type PeerLifecycle = "entering" | "live" | "leaving";
-
-export interface Peer {
-  id: string;
-  label: string;
-  color: string;
-  state: PeerLifecycle;
-  enteredAt: number;
-  leavingAt: number; // 0 until leaving
-  lastAt: number;
-  prev: Sample | null;
-  latest: Sample;
-  node: HTMLElement;
-}
-
-function shortestArcLerp(a: number, b: number, t: number): number {
-  const diff = ((b - a + 540) % 360) - 180;
-  return a + diff * t;
-}
-
-// Rendered pose at (now - 150 ms): lerp between the two newest samples,
-// extrapolate at most 250 ms across gaps, then hold (SPEC 12.3).
-export function interpolate(peer: Peer, now: number): PeerState {
-  const target = now - INTERP_DELAY_MS;
-  const { prev, latest } = peer;
-  if (!prev || latest.at <= prev.at) return latest.s;
-  if (target <= prev.at) return prev.s;
-  const span = latest.at - prev.at;
-  let t = (target - prev.at) / span;
-  if (t > 1) {
-    const overshoot = Math.min(target - latest.at, EXTRAPOLATE_MAX_MS);
-    t = 1 + overshoot / span;
-  }
-  return {
-    x: prev.s.x + (latest.s.x - prev.s.x) * t,
-    z: prev.s.z + (latest.s.z - prev.s.z) * t,
-    h: shortestArcLerp(prev.s.h, latest.s.h, Math.min(t, 1)),
-    p: prev.s.p + (latest.s.p - prev.s.p) * Math.min(t, 1),
-    s: latest.s.s,
-  };
-}
-
+const TELEPORT_JUMP = 3; // units; larger jumps relocate, never glide
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function selfState(): PeerState {
@@ -192,6 +128,7 @@ export class PresenceClient {
         state: "entering",
         enteredAt: now,
         leavingAt: 0,
+        teleportAt: 0,
         lastAt: now,
         prev: null,
         latest: { s, at: now },
@@ -205,6 +142,16 @@ export class PresenceClient {
       peer.state = "entering";
       peer.enteredAt = now;
       peer.leavingAt = 0;
+    }
+    // Teleport rule (SPEC 12.3): a jump > 3 u snaps both samples to the new
+    // spot, so neither the DOM mirror nor the body ever glides across it.
+    const jump = Math.hypot(s.x - peer.latest.s.x, s.z - peer.latest.s.z);
+    if (jump > TELEPORT_JUMP) {
+      peer.prev = { s, at: now };
+      peer.latest = { s, at: now };
+      peer.teleportAt = now;
+      peer.lastAt = now;
+      return;
     }
     peer.prev = peer.latest;
     peer.latest = { s, at: now };

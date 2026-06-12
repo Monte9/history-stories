@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { PresenceClient } from "./client";
+import { presenceStore } from "./presenceStore";
 
 // Mounts presence after the room has loaded (SPEC 12.2): ?net=off loads
 // nothing, ?net=local uses the BroadcastChannel reference transport, the
@@ -29,11 +30,13 @@ export default function PresenceManager({ loaded }: { loaded: boolean }) {
           return;
         }
         client = c;
+        presenceStore.client = c;
         // If no signaling relay connects, settle honestly to off and stop
         // the reconnection attempts (solo room, bounded console noise).
         healthTimer = setTimeout(() => {
           if (!stopped && client?.degradeIfUnreachable()) {
             client = null;
+            presenceStore.client = null;
             console.info("presence relays unreachable, the museum is solo this visit");
           }
         }, 8000);
@@ -53,6 +56,7 @@ export default function PresenceManager({ loaded }: { loaded: boolean }) {
       window.removeEventListener("pagehide", onPageHide);
       client?.stop();
       client = null;
+      presenceStore.client = null;
     };
   }, [loaded]);
 

@@ -29,6 +29,7 @@ import {
 } from "./playerStore";
 import { focusStore } from "./focusStore";
 import PresenceManager from "./presence/PresenceManager";
+import RemoteAvatars from "./RemoteAvatars";
 import {
   makeFloorTexture,
   makePlacardTexture,
@@ -475,6 +476,31 @@ function TouchControls() {
   );
 }
 
+// "N in the room" pill (SPEC 12.5): the only UI presence adds, and only
+// with company. Counts you plus rendered peers, driven by the HUD attr.
+function PresenceChip() {
+  const [peers, setPeers] = useState(0);
+  useEffect(() => {
+    const hud = document.getElementById("museum-hud");
+    if (!hud) return;
+    const read = () =>
+      setPeers(parseInt(hud.getAttribute("data-peers") || "0", 10) || 0);
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(hud, { attributes: true, attributeFilter: ["data-peers"] });
+    return () => mo.disconnect();
+  }, []);
+  if (peers < 1) return null;
+  return (
+    <div
+      id="museum-presence-count"
+      className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full border border-[var(--color-border)] bg-black/70 px-3.5 py-1.5 text-xs text-[var(--color-text)] backdrop-blur sm:top-5 sm:text-sm"
+    >
+      {peers + 1} in the room
+    </div>
+  );
+}
+
 function webglAvailable(): boolean {
   try {
     const canvas = document.createElement("canvas");
@@ -630,12 +656,14 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         <WalkControls />
         <CameraRig />
         <AvatarBody getPose={() => playerStore} getOpacity={localBodyOpacity} />
+        <RemoteAvatars />
         <RoomShell />
         <Suspense fallback={null}>
           <Paintings stories={stories} onLoaded={() => setLoaded(true)} />
         </Suspense>
       </Canvas>
       <PresenceManager loaded={loaded} />
+      <PresenceChip />
       {loaded && <HintOverlay coarse={coarse} />}
       {loaded && <TouchControls />}
       {loaded && (
