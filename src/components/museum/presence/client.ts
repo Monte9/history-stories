@@ -33,6 +33,7 @@ function selfState(): PeerState {
     h: round2(((playerStore.headingDeg % 360) + 360) % 360),
     p: round2(playerStore.pitchDeg),
     s: round2(playerStore.speed),
+    v: playerStore.variant,
   };
 }
 
@@ -42,7 +43,8 @@ function changed(a: PeerState, b: PeerState): boolean {
     Math.abs(a.z - b.z) > 0.01 ||
     Math.abs(((a.h - b.h + 540) % 360) - 180) > 0.5 ||
     Math.abs(a.p - b.p) > 0.5 ||
-    Math.abs(a.s - b.s) > 0.05
+    Math.abs(a.s - b.s) > 0.05 ||
+    (a.v ?? 0) !== (b.v ?? 0)
   );
 }
 

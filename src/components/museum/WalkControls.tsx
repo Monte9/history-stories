@@ -6,7 +6,8 @@ import * as THREE from "three";
 import { DEFAULT_SPAWN, FACE_HEADINGS, ROOM, type WallId } from "./layout";
 import { playerStore } from "./playerStore";
 
-const WALK_SPEED = 3; // units/s
+const WALK_SPEED = 4; // units/s (Monte 2026-06-12: brisker pace)
+const SPRINT_SPEED = 7; // units/s while Shift is held
 const TURN_SPEED = 100; // deg/s
 const SMOOTH = 0.15; // s to ~reach target velocity
 const CLAMP = ROOM.half - ROOM.margin;
@@ -93,6 +94,7 @@ export default function WalkControls() {
   const vel = useRef({ walk: 0, turn: 0 });
   const wheelVel = useRef({ walk: 0, turn: 0 });
   const dragAccum = useRef({ heading: 0, pitch: 0 });
+  const sprint = useRef(false);
   const lastSave = useRef(0);
 
   // Publish pose to playerStore (CameraRig, FocusManager, and the avatar
@@ -139,6 +141,7 @@ export default function WalkControls() {
     apply();
 
     const down = (e: KeyboardEvent) => {
+      if (e.key === "Shift") sprint.current = true;
       const action = KEYMAP[e.code];
       if (!action) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -146,10 +149,14 @@ export default function WalkControls() {
       keys.current.add(action);
     };
     const up = (e: KeyboardEvent) => {
+      if (e.key === "Shift") sprint.current = false;
       const action = KEYMAP[e.code];
       if (action) keys.current.delete(action);
     };
-    const clear = () => keys.current.clear();
+    const clear = () => {
+      keys.current.clear();
+      sprint.current = false;
+    };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     window.addEventListener("blur", clear);
@@ -217,8 +224,11 @@ export default function WalkControls() {
     const dt = Math.min(delta, 0.1);
     const active = (a: Action) =>
       keys.current.has(a) || externalKeys.has(a);
+    // Shift sprints the body (Monte 2026-06-12); wheel impulses stay at
+    // walking pace.
+    const pace = sprint.current ? SPRINT_SPEED : WALK_SPEED;
     const targetWalk =
-      (active("fwd") ? WALK_SPEED : 0) + (active("back") ? -WALK_SPEED : 0);
+      (active("fwd") ? pace : 0) + (active("back") ? -pace : 0);
     const targetTurn =
       (active("right") ? TURN_SPEED : 0) + (active("left") ? -TURN_SPEED : 0);
     const a = Math.min(1, dt / SMOOTH);
@@ -246,11 +256,11 @@ export default function WalkControls() {
       }
       return;
     }
-    // Inputs sum into one velocity; the keyboard speed caps the total.
+    // Inputs sum into one velocity; the current pace caps the total.
     const walk = THREE.MathUtils.clamp(
       vel.current.walk + wheelVel.current.walk,
-      -WALK_SPEED,
-      WALK_SPEED,
+      -pace,
+      pace,
     );
     const turn = THREE.MathUtils.clamp(
       vel.current.turn + wheelVel.current.turn,

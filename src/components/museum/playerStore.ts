@@ -17,7 +17,36 @@ export const playerStore = {
   turnRate: 0, // deg/s, from actual heading change
   camMode: "third" as CamMode,
   boom: 0, // current chase-camera distance; 0 in first person
+  variant: 0, // body look, index into AVATAR_VARIANTS
 };
+
+const VARIANT_KEY = "museum.avatar.v1";
+const VARIANT_COUNT = 4;
+
+// Each browser gets a random body on first visit; B cycles it (Monte,
+// 2026-06-12). localStorage so the look sticks across visits.
+export function initVariant() {
+  let v = -1;
+  try {
+    v = parseInt(localStorage.getItem(VARIANT_KEY) || "", 10);
+  } catch {}
+  if (!(v >= 0 && v < VARIANT_COUNT)) {
+    v = Math.floor(Math.random() * VARIANT_COUNT);
+    try {
+      localStorage.setItem(VARIANT_KEY, String(v));
+    } catch {}
+  }
+  playerStore.variant = v;
+  for (const fn of listeners) fn();
+}
+
+export function cycleVariant() {
+  playerStore.variant = (playerStore.variant + 1) % VARIANT_COUNT;
+  try {
+    localStorage.setItem(VARIANT_KEY, String(playerStore.variant));
+  } catch {}
+  for (const fn of listeners) fn();
+}
 
 const listeners = new Set<() => void>();
 

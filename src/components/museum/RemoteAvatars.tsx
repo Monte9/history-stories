@@ -7,6 +7,7 @@ import AvatarBody, { type AvatarPose } from "./AvatarBody";
 import { makeTextTexture } from "./textures";
 import { presenceStore } from "./presence/presenceStore";
 import { interpolate, type Peer } from "./presence/peers";
+import { clampVariant } from "./avatarVariants";
 
 // Remote visitors (SPEC 12.4-12.5): tinted bodies driven by interpolated
 // peer state, billboard labels, staged enter/leave/teleport fades. Scenery
@@ -83,7 +84,7 @@ function RemotePeer({ peer }: { peer: Peer }) {
       const a = Math.min(1, dt / 0.15);
       const dir = p.s < -0.05 ? -1 : 1;
       pose.current.speed +=
-        (dir * Math.min(planar, 4) - pose.current.speed) * a;
+        (dir * Math.min(planar, 8) - pose.current.speed) * a;
       pose.current.turnRate += (turn - pose.current.turnRate) * a;
     }
     last.current = { x: p.x, z: p.z, h: p.h, t: now };
@@ -95,7 +96,13 @@ function RemotePeer({ peer }: { peer: Peer }) {
 
   const getOpacity = () => lifecycleOpacity(peer, performance.now());
 
-  return <AvatarBody getPose={getPose} tint={peer.color} getOpacity={getOpacity} />;
+  return (
+    <AvatarBody
+      getPose={getPose}
+      variant={clampVariant(peer.latest.s.v)}
+      getOpacity={getOpacity}
+    />
+  );
 }
 
 function PeerLabel({
@@ -218,8 +225,12 @@ export default function RemoteAvatars() {
     const client = presenceStore.client;
     // The protocol layer owns the render cap; bodies exist only for
     // peers it marked rendered.
+    // The key carries the variant so a peer pressing B remounts their body
+    // with the new look.
     const current = client
-      ? [...client.peers.values()].filter((p) => p.rendered).map((p) => p.id)
+      ? [...client.peers.values()]
+          .filter((p) => p.rendered)
+          .map((p) => `${p.id}:${clampVariant(p.latest.s.v)}`)
       : [];
     setIds((prev) =>
       prev.length === current.length && prev.every((id, i) => id === current[i])
@@ -232,10 +243,10 @@ export default function RemoteAvatars() {
   if (!client) return null;
   return (
     <>
-      {ids.map((id) => {
-        const peer = client.peers.get(id);
+      {ids.map((key) => {
+        const peer = client.peers.get(key.slice(0, key.lastIndexOf(":")));
         return peer ? (
-          <group key={id}>
+          <group key={key}>
             <RemotePeer peer={peer} />
             <PeerLabel peer={peer} registry={registry} />
           </group>

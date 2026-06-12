@@ -3,6 +3,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { AVATAR_VARIANTS, clampVariant } from "./avatarVariants";
 
 // A procedural articulated human (SPEC 11.1-11.2): ~18 primitives posed per
 // frame by a gait that is a pure function of speed, turn rate, phase, and
@@ -16,11 +17,10 @@ export interface AvatarPose {
   turnRate: number; // deg/s
 }
 
-const STRIDE = 0.85; // units per step
-const SKIN = "#c9a585";
-const SHIRT = "#3a4250";
-const TROUSERS = "#2a2723";
-const SHOES = "#1a1816";
+const STRIDE_BASE = 0.85; // units per step at walking pace
+const STRIDE_SPRINT = 1.15; // stride lengthens as the pace breaks into a run
+const WALK_REF = 4; // u/s; gait amplitude saturates here
+const SPRINT_REF = 7; // u/s; lean keeps growing toward this
 
 // Proportions for a 1.75-unit figure.
 const HIP_Y = 0.92;
@@ -138,13 +138,14 @@ function Arm({
 
 export default function AvatarBody({
   getPose,
-  tint,
+  variant = 0,
   getOpacity,
 }: {
   getPose: () => AvatarPose;
-  tint?: string; // shirt color variant (remote visitors, SPEC 12.4)
+  variant?: number; // index into AVATAR_VARIANTS
   getOpacity?: () => number; // boom fade for the local body
 }) {
+  const look = AVATAR_VARIANTS[clampVariant(variant)];
   const joints = useRef<Partial<Joints>>({});
   const phase = useRef(0);
   const pose = useRef({
@@ -169,12 +170,13 @@ export default function AvatarBody({
         transparent: true,
       });
     return {
-      skin: make(SKIN),
-      shirt: make(tint || SHIRT),
-      trousers: make(TROUSERS),
-      shoes: make(SHOES),
+      skin: make(look.skin),
+      shirt: make(look.shirt),
+      trousers: make(look.trousers),
+      shoes: make(look.shoes),
+      hair: make(look.hair || "#000000"),
     };
-  }, [tint]);
+  }, [look]);
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.1);
@@ -191,8 +193,12 @@ export default function AvatarBody({
     const dir = p.speed >= 0 ? 1 : -1;
 
     // Phase: stride-locked while walking (feet cannot skate), a slow fixed
-    // shuffle while turning in place.
-    if (walking) phase.current += ((Math.PI * 2 * speed) / (STRIDE * 2)) * dt * dir;
+    // shuffle while turning in place. Stride lengthens into a run.
+    const stride =
+      STRIDE_BASE +
+      (STRIDE_SPRINT - STRIDE_BASE) *
+        THREE.MathUtils.clamp((speed - WALK_REF) / (SPRINT_REF - WALK_REF), 0, 1);
+    if (walking) phase.current += ((Math.PI * 2 * speed) / (stride * 2)) * dt * dir;
     else if (turning) phase.current += Math.PI * 2 * 1.0 * dt;
 
     const t = pose.current;
@@ -203,20 +209,26 @@ export default function AvatarBody({
     // hips/shoulders/elbows/lean; knees bend the calf backward, positive.
     let target;
     if (walking) {
-      const amp = Math.min(1, speed / 3) * (dir > 0 ? 1 : 0.6);
-      const swing = 0.56 * amp; // ~32deg
+      const amp = Math.min(1, speed / WALK_REF) * (dir > 0 ? 1 : 0.6);
+      const sprint = THREE.MathUtils.clamp(
+        (speed - WALK_REF) / (SPRINT_REF - WALK_REF),
+        0,
+        1,
+      );
+      const swing = (0.56 + 0.18 * sprint) * amp;
       const s = Math.sin(ph);
       target = {
         hipL: swing * s,
         hipR: -swing * s,
-        kneeL: Math.max(0, Math.sin(ph - 1.2)) * 0.8 * amp,
-        kneeR: Math.max(0, Math.sin(ph - 1.2 + Math.PI)) * 0.8 * amp,
-        shL: -0.38 * amp * s,
-        shR: 0.38 * amp * s,
-        elL: -(0.25 + 0.15 * amp),
-        elR: -(0.25 + 0.15 * amp),
-        lean: -0.07 * (speed / 3) * dir,
-        bob: 0.03 * amp * Math.sin(2 * ph),
+        kneeL: Math.max(0, Math.sin(ph - 1.2)) * (0.8 + 0.3 * sprint) * amp,
+        kneeR:
+          Math.max(0, Math.sin(ph - 1.2 + Math.PI)) * (0.8 + 0.3 * sprint) * amp,
+        shL: -(0.62 + 0.2 * sprint) * amp * s,
+        shR: (0.62 + 0.2 * sprint) * amp * s,
+        elL: -(0.3 + 0.25 * amp + 0.25 * sprint),
+        elR: -(0.3 + 0.25 * amp + 0.25 * sprint),
+        lean: -(0.07 + 0.08 * sprint) * amp * dir,
+        bob: (0.03 + 0.015 * sprint) * amp * Math.sin(2 * ph),
       };
     } else if (turning) {
       const lift = Math.sin(ph);
@@ -289,7 +301,7 @@ export default function AvatarBody({
 
   return (
     <group ref={setJ("root")}>
-      <group ref={setJ("body")}>
+      <group ref={setJ("body")} scale={[look.shoulder, look.height, 1]}>
         {/* pelvis */}
         <mesh position={[0, HIP_Y + 0.02, 0]} material={materials.trousers} raycast={noRaycast}>
           <boxGeometry args={[0.3, 0.16, 0.18]} />
@@ -317,6 +329,17 @@ export default function AvatarBody({
         <mesh position={[0, 1.64, 0]} material={materials.skin} raycast={noRaycast}>
           <capsuleGeometry args={[0.1, 0.06, 4, 10]} />
         </mesh>
+        {/* hair cap */}
+        {look.hair && (
+          <mesh
+            position={[0, 1.71, -0.01]}
+            scale={[1.06, 0.62, 1.1]}
+            material={materials.hair}
+            raycast={noRaycast}
+          >
+            <sphereGeometry args={[0.105, 10, 8]} />
+          </mesh>
+        )}
         <Arm side={1} shirt={materials.shirt} skin={materials.skin} shoulderRef={setJ("shoulderL")} elbowRef={setJ("elbowL")} />
         <Arm side={-1} shirt={materials.shirt} skin={materials.skin} shoulderRef={setJ("shoulderR")} elbowRef={setJ("elbowR")} />
         <Leg side={1} trousers={materials.trousers} shoes={materials.shoes} hipRef={setJ("hipL")} kneeRef={setJ("kneeL")} />

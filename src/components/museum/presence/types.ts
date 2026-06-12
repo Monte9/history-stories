@@ -10,6 +10,7 @@ export type PeerState = {
   h: number; // heading deg
   p: number; // pitch deg
   s: number; // planar speed units/s
+  v?: number; // body variant 0-3 (absent from older clients = 0)
 };
 
 export type WireMessage = { t: "st"; d: PeerState } | { t: "bye" };

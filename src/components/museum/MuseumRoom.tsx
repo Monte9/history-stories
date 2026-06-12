@@ -22,7 +22,9 @@ import WalkControls, {
 import CameraRig, { localBodyOpacity } from "./CameraRig";
 import AvatarBody from "./AvatarBody";
 import {
+  cycleVariant,
   initCamMode,
+  initVariant,
   playerStore,
   setCamMode,
   subscribeCamMode,
@@ -532,6 +534,7 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
     setGlOk(webglAvailable());
     setCoarse(window.matchMedia("(pointer: coarse)").matches);
     initCamMode();
+    initVariant();
     // Known before any frame renders: if the hint is going to show, the
     // prompt must never flash over it during the load reveal.
     try {
@@ -542,19 +545,24 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
   }, []);
 
   const [camMode, setCamModeState] = useState(playerStore.camMode);
+  const [variant, setVariantState] = useState(playerStore.variant);
   useEffect(
     () =>
       subscribeCamMode(() => {
         setCamModeState(playerStore.camMode);
+        setVariantState(playerStore.variant);
       }),
     [],
   );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== "KeyV") return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      setCamMode(playerStore.camMode === "third" ? "first" : "third");
+      if (e.code === "KeyV") {
+        setCamMode(playerStore.camMode === "third" ? "first" : "third");
+      } else if (e.code === "KeyB") {
+        cycleVariant();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -675,7 +683,12 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
         <ambientLight intensity={0.6} color="#fffdf8" />
         <WalkControls />
         <CameraRig />
-        <AvatarBody getPose={() => playerStore} getOpacity={localBodyOpacity} />
+        <AvatarBody
+          key={variant}
+          variant={variant}
+          getPose={() => playerStore}
+          getOpacity={localBodyOpacity}
+        />
         <RemoteAvatars />
         <RoomShell />
         <Suspense fallback={null}>

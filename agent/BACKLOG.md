@@ -219,6 +219,24 @@ Converted ACs (from agent/evals/20260612-021952-taste-audit-2.md, recorded befor
 4. **Identity is stable across rejoins** (audit 4): a friend doing Enter -> story -> Escape re-materializes with the SAME label and color on the observer's side, never a duplicate node; a same-id leave/rejoin within a session is never renumbered
 5. **Labels never pile up** (audit 5): in a 4-peer cluster, every rendered label is fully readable or suppressed entirely; label sprites never visibly intersect each other in screenshots
 
+## Sprint 17: Monte's live-test round 2 — pace, sprint, bodies, multiplayer check — pending
+
+2026-06-12, Monte's direct asks (criteria set by the human; evaluator verdicts as usual, no separate alignment needed):
+
+- Multiplayer regression check: verified NOT broken in code — two fresh visitors over real Nostr relays + WebRTC discover each other on both localhost HEAD and the live site (zero errors). Most likely causes of Monte's failed test: TURN-less symmetric NAT (documented zero-credential tradeoff) or long-session relay decay (long-idle probe run to check)
+- Arms move more when walking: shoulder swing raised ~60%, dynamic elbow bend, scales further when sprinting
+- Walking pace faster: 3 -> 4 u/s
+- Holding Shift sprints: 7 u/s with longer stride, stronger swing, deeper lean; data-speed reflects it; releasing Shift returns to walking pace
+- 4 character bodies: distinct skin/outfit/hair/build variants; a new browser is assigned one at random (localStorage); B cycles them; the choice travels in presence state (wire field `v`, backward compatible) so friends see the body you picked
+
+Acceptance criteria (Monte-specified):
+
+1. Holding forward reaches data-speed ~4.00 on open floor; holding Shift+forward reaches ~7.00 and returns to ~4.00 on release; the sprint gait visibly differs (longer stride, more lean/swing) in screenshots
+2. Walking screenshots show clearly larger arm swing than the sprint-16 build (arms visibly separated from the torso mid-stride)
+3. A fresh browser profile gets one of 4 bodies (localStorage museum.avatar.v1 in 0-3); pressing B cycles through all 4 distinct looks (screenshot each: different shirt/skin/hair/build) and persists across reload
+4. Over ?net=local, a peer pressing B changes their body on the observer's screen within ~2 s; older-protocol states without `v` render as variant 0 without errors
+5. Production multiplayer e2e: two fresh contexts over real relays discover each other (already proven; re-verify post-changes); zero non-exempt console errors; pnpm build green; sprint 12-16 standing regressions hold
+
 ---
 
 ## Superseded: original Sprint 7 (marked 2026-06-11)

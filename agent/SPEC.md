@@ -412,3 +412,12 @@ src/components/museum/presence/PresenceManager.tsx  join/leave, peer map, interp
 ```
 
 Dependency added in the presence sprint: `trystero` (^0.23). Nothing else.
+
+---
+
+## 13. Revisions from Monte's live test 2 (2026-06-12)
+
+- **Pace** (revises 3.1, 11.2): walking 4 u/s (was 3); holding Shift sprints at 7 u/s. Gait amplitude saturates at 4 u/s; stride lengthens 0.85 -> 1.15 and lean/swing deepen toward 7. Wheel impulses stay at walking pace.
+- **Arms** (revises 11.2): shoulder swing ±~36-47 deg (was ±22), dynamic elbow bend; counter-swing unchanged.
+- **Bodies** (extends 11.1, 12.4): four avatar variants (skin/outfit/hair/build) in `avatarVariants.ts`. New browsers are assigned one at random (localStorage `museum.avatar.v1`); `B` cycles; the variant travels in presence state as optional field `v` (absent = 0, backward compatible). Remote shirts no longer take the peer palette tint; the palette remains on label borders for identity.
+- **Multiplayer reliability note**: production e2e (real Nostr relays, separate browser contexts) verified working on the live site 2026-06-12. Known unfixed-by-design gaps of the zero-credential transport: TURN-less symmetric NAT pairs (e.g. cellular-to-wifi) cannot connect; the upgrade path (PartyKit/Supabase + TURN) remains a Monte decision per 12.1.
