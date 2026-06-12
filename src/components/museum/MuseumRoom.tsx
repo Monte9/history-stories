@@ -546,14 +546,17 @@ export default function MuseumRoom({ stories }: { stories: MuseumStory[] }) {
 
   const [camMode, setCamModeState] = useState(playerStore.camMode);
   const [variant, setVariantState] = useState(playerStore.variant);
-  useEffect(
-    () =>
-      subscribeCamMode(() => {
-        setCamModeState(playerStore.camMode);
-        setVariantState(playerStore.variant);
-      }),
-    [],
-  );
+  useEffect(() => {
+    const unsubscribe = subscribeCamMode(() => {
+      setCamModeState(playerStore.camMode);
+      setVariantState(playerStore.variant);
+    });
+    // initVariant/initCamMode notified before this subscription existed
+    // (mount effects run in declaration order); sync what they resolved.
+    setCamModeState(playerStore.camMode);
+    setVariantState(playerStore.variant);
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
