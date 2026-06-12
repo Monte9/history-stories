@@ -1,9 +1,9 @@
 # Harness State
 
 - phase: build
-- sprint: 14 (pending) — Company: remote bodies materialize and walk
+- sprint: 15 (pending) — Presence hardening: reconnects, idle, a handful at once
 - attempts: 0
-- last_verdict: PASS (sprint 13)
+- last_verdict: PASS (sprint 14)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.
@@ -31,3 +31,4 @@ Note for the next run: GOAL.md was rewritten 2026-06-11 (third-person body + mul
 | 2026-06-11 | - | plan | GOAL.md rewritten (third-person body + live presence); SPEC sections 11-12 appended; sprints 12-16 planned with draft ACs; cursor -> sprint 12 |
 | 2026-06-11 | 12 | build | aligned ACs first (new workflow); PASS first attempt (1 eval infra retry), landed on main |
 | 2026-06-12 | 13 | build | aligned ACs; AC4 re-aligned mid-build (browser network-layer logs unsuppressable); PASS first attempt, landed on main. Carry-over for sprint 15: ?net choice must survive story round trips |
+| 2026-06-12 | 14 | build | aligned ACs; PASS first attempt, landed on main. Soft notes: chip/wordmark overlap at 390px; ?net drop on Escape-return |

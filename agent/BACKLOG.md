@@ -173,7 +173,7 @@ Acceptance criteria (aligned 2026-06-11, evaluator note: `agent/evals/20260611-2
 5. **Presence costs nothing where it isn't wanted.** At `/?net=off`: `data-net="off"`, `data-peers` stays `"0"`, no `.museum-peer` ever appears, zero presence network requests (no relay websockets, no STUN/TURN). On the default load, any JS not fetched under `?net=off` is fetched only after `data-loaded="true"` (lazy chunk). `/gallery`, one story page, and the no-WebGL fallback open zero presence connections in any mode with zero console errors.
 6. **Nothing shipped regresses.** `pnpm build` exits 0. With a peer connected at `/?net=local`, the sprint-12 solo journey still passes on page A (third-person default, movement, focus + `#museum-prompt`, Enter, Escape to the same pose); the HUD's player attributes are never altered by incoming peer traffic; zero console errors at 1280x900 and 390x844; no horizontal overflow at 390px.
 
-## Sprint 14: Company — remote bodies materialize and walk — pending
+## Sprint 14: Company — remote bodies materialize and walk — done (2026-06-12, PASS)
 
 SPEC 12.4-12.5. Remote avatars reusing `AvatarBody` with palette tints and `Visitor N` billboard labels, the entering/live/leaving lifecycle with staged fades, 150 ms interpolation driving remote gait, the teleport rule, and the `#museum-presence-count` chip. Verified entirely over `?net=local`.
 
