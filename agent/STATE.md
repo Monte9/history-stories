@@ -1,9 +1,9 @@
 # Harness State
 
 - phase: build
-- sprint: 16 (pending) — Taste pass: the body and the company feel shippable
+- sprint: backlog complete (sprints 12-17 PASS; awaiting Monte review)
 - attempts: 0
-- last_verdict: PASS (sprint 15)
+- last_verdict: PASS (sprints 16+17 combined, attempt 2)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.
@@ -33,3 +33,5 @@ Note for the next run: GOAL.md was rewritten 2026-06-11 (third-person body + mul
 | 2026-06-12 | 13 | build | aligned ACs; AC4 re-aligned mid-build (browser network-layer logs unsuppressable); PASS first attempt, landed on main. Carry-over for sprint 15: ?net choice must survive story round trips |
 | 2026-06-12 | 14 | build | aligned ACs; PASS first attempt, landed on main. Soft notes: chip/wordmark overlap at 390px; ?net drop on Escape-return |
 | 2026-06-12 | 15 | build | aligned ACs; PASS first attempt (fixed both carry-over defects; one mid-build race found by self-check: loaded-effect consumed the fresh return flag during route transition). Soft notes for 16: label ballooning near camera, label occlusion in groups, no prompt on spawn-focused painting, Visitor-number churn |
+| 2026-06-12 | 16 | build | taste audit 2 -> 4 blockers + 1 nice-to-have converted to ACs and fixed; PASS in combined verdict |
+| 2026-06-12 | 17 | build | Monte's direct asks (pace 4, Shift sprint, arm swing, 4 bodies) + multiplayer investigation; FAIL attempt 1 (stored variant not applied to self); PASS attempt 2. Root-caused live multiplayer bug: trystero 0.25 passive mode made idle visitors invisible; pinned 0.21.8 (announce-forever), idle-then-join proven at 3 and 7 minutes |

@@ -199,7 +199,7 @@ Acceptance criteria (aligned 2026-06-12, evaluator note: `agent/evals/20260612-0
 5. **A handful at once; the cap accounts honestly.** Observer O with four concurrent peer identities (>= 2 real museum pages, rest protocol-conformant senders; >= 2 joining within ~1 s): `data-peers="4"`, four nodes with four DISTINCT labels, palette colors, chip "5 in the room", four labeled figures in a screenshot; while a peer streams, O holds forward 3-4 s with >= 2 u displacement and no >= 1.5 s stall, peer keeps streaming. At nine identities: `data-peers` exactly "8", exactly 8 nodes, zero errors, chip counts everyone or marks overflow (a plain understatement fails). Stopping one rendered sender: the ninth identity's node appears staged within ~10 s and `data-peers` returns to "8" (tracked surplus is promoted).
 6. **Mobile holds with company; nothing regresses.** At 390x844 with a peer rendered: no overflow, touch cluster walks, and `#museum-presence-count`, wordmark, nav pills, hint (while visible), `#museum-prompt` (while focused), and the touch cluster are pairwise non-intersecting with the chip legible (the sprint-14 overlap is now a FAIL). Solo `?net=off` and the settled production default behave identically to sprint 12 with zero `.museum-peer`. `pnpm build` exits 0; zero console errors at both viewports (exempt class only on the production settling path); homepage, story page, `/gallery` per standing gates.
 
-## Sprint 16: Taste pass — the body and the company feel shippable — pending
+## Sprint 16: Taste pass — the body and the company feel shippable — done (2026-06-12, PASS in combined 16+17 verdict, attempt 2)
 
 Process sprint, sprint-10 pattern. The evaluator runs a curator taste audit (RUBRIC) of the third-person and presence experience at both viewports: avatar look and proportions, gait quality at all speeds and while turning, chase-camera framing and feel near walls, label and count-chip legibility, materialize/despawn feel, multi-peer composition. Top findings convert to ACs before any code.
 
@@ -219,7 +219,7 @@ Converted ACs (from agent/evals/20260612-021952-taste-audit-2.md, recorded befor
 4. **Identity is stable across rejoins** (audit 4): a friend doing Enter -> story -> Escape re-materializes with the SAME label and color on the observer's side, never a duplicate node; a same-id leave/rejoin within a session is never renumbered
 5. **Labels never pile up** (audit 5): in a 4-peer cluster, every rendered label is fully readable or suppressed entirely; label sprites never visibly intersect each other in screenshots
 
-## Sprint 17: Monte's live-test round 2 — pace, sprint, bodies, multiplayer check — pending
+## Sprint 17: Monte's live-test round 2 — pace, sprint, bodies, multiplayer check — done (2026-06-12, PASS attempt 2; trystero pinned to 0.21.8 to fix idle invisibility)
 
 2026-06-12, Monte's direct asks (criteria set by the human; evaluator verdicts as usual, no separate alignment needed):
 
@@ -258,3 +258,5 @@ Acceptance criteria (Monte-specified):
 - Sprint: Character profile pages — superseded
 - Sprint: Character relationships — superseded
 - Sprint: Search — superseded
+
+2026-06-12 note for the next alignment: sprint 13 AC4's "noise silent after 45 s" cessation bound was calibrated against trystero 0.25's give-up behavior, which caused the idle-invisibility bug. 0.21's announce-forever retries dead relays indefinitely (~1 exempt-class message per 20-50 s steady state) — that persistence IS the fix. Re-calibrate the bound to a steady-state rate cap (evaluator flag, agent/evals/20260612-042705-sprint-16-17-attempt2.md).
