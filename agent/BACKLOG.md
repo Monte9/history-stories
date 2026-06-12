@@ -186,7 +186,7 @@ Acceptance criteria (aligned 2026-06-12, evaluator note: `agent/evals/20260612-0
 5. **The chip counts honestly; presence stays scenery.** `#museum-presence-count` absent on a solo `/?net=local` load, appears when a peer joins, increases on a second join, disappears within ~5 s of the last leave; at `/?net=off` no chip, no `.museum-peer`, no remote mesh. Non-interference: with the remote figure in the line of sight to a painting, gaze focus still acquires it and Enter opens it; walking straight through the remote body is unobstructed; incoming traffic never alters local `data-x`/`-z`/`-heading`/`data-focused`.
 6. **Both camera modes, both viewports, nothing regresses.** `pnpm build` exits 0. First person shows the remote figure but no part of YOUR body; toggling back shows both. At 390x844 with a peer present: no overflow, touch cluster moves the player, remote figure and chip render. Zero console errors across every local-mode page at both viewports; homepage, one story page, and `/gallery` still render per the standing gates.
 
-## Sprint 15: Presence hardening — reconnects, idle, a handful at once — pending
+## Sprint 15: Presence hardening — reconnects, idle, a handful at once — done (2026-06-12, PASS)
 
 SPEC 12.3 edge rules. Story-round-trip rejoin, heartbeat/idle stability, the teleport rule under `?face=` jumps, the 8-peer render cap, and multi-peer performance on desktop and mobile.
 

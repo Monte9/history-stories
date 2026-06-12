@@ -1,9 +1,9 @@
 # Harness State
 
 - phase: build
-- sprint: 15 (pending) — Presence hardening: reconnects, idle, a handful at once
+- sprint: 16 (pending) — Taste pass: the body and the company feel shippable
 - attempts: 0
-- last_verdict: PASS (sprint 14)
+- last_verdict: PASS (sprint 15)
 - updated: 2026-06-11
 
 Phase is one of: plan | build | blocked. See `.claude/skills/build-sprint/SKILL.md` for the transition table.
@@ -32,3 +32,4 @@ Note for the next run: GOAL.md was rewritten 2026-06-11 (third-person body + mul
 | 2026-06-11 | 12 | build | aligned ACs first (new workflow); PASS first attempt (1 eval infra retry), landed on main |
 | 2026-06-12 | 13 | build | aligned ACs; AC4 re-aligned mid-build (browser network-layer logs unsuppressable); PASS first attempt, landed on main. Carry-over for sprint 15: ?net choice must survive story round trips |
 | 2026-06-12 | 14 | build | aligned ACs; PASS first attempt, landed on main. Soft notes: chip/wordmark overlap at 390px; ?net drop on Escape-return |
+| 2026-06-12 | 15 | build | aligned ACs; PASS first attempt (fixed both carry-over defects; one mid-build race found by self-check: loaded-effect consumed the fresh return flag during route transition). Soft notes for 16: label ballooning near camera, label occlusion in groups, no prompt on spawn-focused painting, Visitor-number churn |
